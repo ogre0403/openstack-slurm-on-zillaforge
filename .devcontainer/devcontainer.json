@@ -1,0 +1,18 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
+// https://github.com/microsoft/vscode-dev-containers/tree/v0.205.2/containers/alpine
+{
+	"name": "terraform",
+	"image": "Zillaforge/terraform:0.0.1-alpha",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"GitHub.copilot-chat",
+				"isudox.vscode-jetbrains-keybindings",
+				"pjmiravalle.terraform-advanced-syntax-highlighting"
+			]
+		}
+	},
+	"features": {
+    	"ghcr.io/cirolosapio/devcontainers-features/alpine-git:0": {}
+	}
+}
