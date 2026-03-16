@@ -22,16 +22,10 @@ variable "keypair_name" {
   default     = ""
 }
 
-variable "sg_name" {
+variable "securitygroup_name" {
   description = "Name of the security group to attach to the server"
   type        = string
   default     = ""
-}
-
-variable "total" {
-  description = "Number of VMs to create"
-  type        = number
-  default     = 1
 }
 
 variable "image_repository" {
@@ -52,8 +46,27 @@ variable "flavor_name" {
   default     = ""
 }
 
-variable "network_name" {
+variable "default_network_name" {
+  description = "Network name to attach the server to (e.g. default)"
+  type        = string
+  default     = "default"
+}
+
+variable "optional_network_name" {
   description = "Network name to attach the server to (e.g. default)"
   type        = string
   default     = ""
+}
+
+variable "total" {
+  description = "Number of VMs to create"
+  type        = number
+  default     = 1
+}
+
+variable "server_password" {
+  description = "Password for the VMs (will be base64-encoded before passing to the API)"
+  type        = string
+  default     = ""
+  sensitive   = true
 }
