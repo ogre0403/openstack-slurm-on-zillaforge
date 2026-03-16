@@ -91,6 +91,14 @@ for i in $(seq 1 10); do
   sleep 15
 done
 %{ endfor ~}
+
+# Install and configure NFS server
+echo "$PASS" | sudo -S dnf install -y nfs-utils
+echo "$PASS" | sudo -S mkdir -p /kolla_nfs
+echo "$PASS" | sudo -S chown nobody:nobody /kolla_nfs
+echo "$PASS" | sudo -S chmod 777 /kolla_nfs
+echo "$PASS" | sudo -S bash -c 'echo "/kolla_nfs ${data.zillaforge_networks.default.networks[0].cidr}(rw,sync,no_subtree_check,no_root_squash)" >> /etc/exports'
+echo "$PASS" | sudo -S systemctl enable --now nfs-server
 EOF
 
   network_attachment {
