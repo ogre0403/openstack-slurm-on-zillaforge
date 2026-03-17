@@ -76,13 +76,15 @@ echo "$PASS" | sudo -S dnf -y install dnf-plugins-core
 echo "$PASS" | sudo -S dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
 echo "$PASS" | sudo -S dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 echo "$PASS" | sudo -S systemctl enable --now docker
+echo "$PASS" | sudo -S sudo groupadd docker
+echo "$PASS" | sudo -S usermod -aG docker cloud-user
 
 # Generate SSH keypair for cloud-user (skip if already exists)
 CLOUD_USER_HOME=$(getent passwd cloud-user | cut -d: -f6)
 echo "$PASS" | sudo -S -u cloud-user bash -c "[ -f $CLOUD_USER_HOME/.ssh/id_rsa ] || ssh-keygen -t rsa -N '' -f $CLOUD_USER_HOME/.ssh/id_rsa -q"
 
 # Install sshpass to allow password-based ssh-copy-id
-echo "$PASS" | sudo -S dnf install -y sshpass
+echo "$PASS" | sudo -S dnf install -y sshpass make
 
 # Copy SSH public key to all nodes (retry up to 10 times per node to wait for boot)
 %{ for ip in [for s in zillaforge_server.nodes : s.network_attachment[0].ip_address] ~}
@@ -99,6 +101,9 @@ echo "$PASS" | sudo -S chown nobody:nobody /kolla_nfs
 echo "$PASS" | sudo -S chmod 777 /kolla_nfs
 echo "$PASS" | sudo -S bash -c 'echo "/kolla_nfs ${data.zillaforge_networks.default.networks[0].cidr}(rw,sync,no_subtree_check,no_root_squash)" >> /etc/exports'
 echo "$PASS" | sudo -S systemctl enable --now nfs-server
+
+# Install additional package
+echo "$PASS" | sudo -S dnf install -y tmux vim
 EOF
 
   network_attachment {
@@ -151,4 +156,49 @@ output "bastion_default_network_ip" {
 output "nodes_default_network_ips" {
   description = "所有 nodes 在 default network 上的 IP"
   value       = { for s in zillaforge_server.nodes : s.name => s.network_attachment[0].ip_address }
+}
+
+# --------------------------------------------------------------------------
+# Generate kolla-ansible configuration files from templates
+# --------------------------------------------------------------------------
+
+resource "local_file" "nfs_shares" {
+  content = templatefile("${path.module}/templates/nfs_shares.tpl", {
+    bastion_ip = zillaforge_server.bastion.network_attachment[0].ip_address
+  })
+  filename = "${path.module}/../kolla-ansible/etc/kolla/config/nfs_shares"
+}
+
+resource "local_file" "globals_yml" {
+  content = templatefile("${path.module}/templates/globals_yml.tpl", {
+    controller_ip = zillaforge_server.nodes[0].network_attachment[0].ip_address
+  })
+  filename = "${path.module}/../kolla-ansible/etc/kolla/globals.yml"
+}
+
+resource "local_file" "vars" {
+  content = templatefile("${path.module}/templates/99-vars.tpl", {
+    server_password = var.server_password
+  })
+  filename = "${path.module}/../kolla-ansible/etc/kolla/inventroy/99-vars"
+}
+
+resource "local_file" "compute" {
+  content = templatefile("${path.module}/templates/05-compute.tpl", {
+    compute_nodes = [
+      for s in slice(zillaforge_server.nodes, 1, length(zillaforge_server.nodes)) : {
+        name = s.name
+        ip   = s.network_attachment[0].ip_address
+      }
+    ]
+  })
+  filename = "${path.module}/../kolla-ansible/etc/kolla/inventroy/05-compute"
+}
+
+resource "local_file" "controller" {
+  content = templatefile("${path.module}/templates/01-controller.tpl", {
+    controller_name = zillaforge_server.nodes[0].name
+    controller_ip   = zillaforge_server.nodes[0].network_attachment[0].ip_address
+  })
+  filename = "${path.module}/../kolla-ansible/etc/kolla/inventroy/01-controller"
 }

@@ -1,0 +1,22 @@
+services:
+  kolla_ansible:
+    container_name: kolla_ansible
+    build:
+      context: ..
+      dockerfile: kolla-ansible/Dockerfile
+    environment:
+      - ANSIBLE_CONFIG=/etc/kolla/ansible.cfg
+      - ANSIBLE_COLLECTIONS_PATH=/usr/share/ansible/collections
+      - PUID=1000
+      - PGID=1000
+    command:
+      - "/bin/sh"
+      - "-c"
+      - |
+        sleep infinity
+    restart: always
+    volumes:
+      - ${PWD}/kolla-ansible/etc/kolla:/etc/kolla:rw
+      # /etc/openstack is required for kolla-ansible post-deploy
+      - ${PWD}/kolla-ansible/etc/openstack:/etc/openstack:rw
+    network_mode: host

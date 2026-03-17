@@ -9,6 +9,7 @@ RUN     dnf makecache \
         gcc \
         openssl-devel \
         python3-libselinux \
+        sshpass \
     &&  dnf clean all \
     &&  rm -rf /var/cache/dnf
 
@@ -23,6 +24,22 @@ RUN     dnf -y install \
 RUN curl -sS https://bootstrap.pypa.io/get-pip.py | /usr/bin/python3.11
 
 RUN     pip install git+https://opendev.org/openstack/kolla-ansible@stable/2024.2 \
-    &&  kolla-ansible install-deps
+    &&  pip install python-openstackclient
 
-RUN     pip install python-openstackclient
+
+# 建立預設帳號
+RUN groupadd -g 1000 kolla && \
+    useradd -u 1000 -g 1000 -m -s /bin/bash kolla
+
+
+ENV ANSIBLE_COLLECTIONS_PATH=/usr/share/ansible/collections
+RUN kolla-ansible install-deps
+
+WORKDIR /home/kolla
+
+COPY kolla-ansible/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["/bin/bash"]
+# CMD ["sleep", "infinity"]
