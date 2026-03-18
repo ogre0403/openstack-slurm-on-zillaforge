@@ -19,31 +19,31 @@ variable "project_sys_code" {
 variable "keypair_name" {
   description = "Name of the SSH keypair to inject into the server"
   type        = string
-  default     = ""
+  default     = null
 }
 
 variable "securitygroup_name" {
   description = "Name of the security group to attach to the server"
   type        = string
-  default     = ""
+  default     = null
 }
 
 variable "image_repository" {
   description = "Image repository to use for the server (e.g. ubuntu)"
   type        = string
-  default     = ""
+  default     = null
 }
 
 variable "image_tag" {
   description = "Image tag to use for the server (e.g. 2404)"
   type        = string
-  default     = ""
+  default     = null
 }
 
 variable "flavor_name" {
   description = "Flavor name to use for the server (e.g. Basic.small)"
   type        = string
-  default     = ""
+  default     = null
 }
 
 variable "default_network_name" {
@@ -53,20 +53,35 @@ variable "default_network_name" {
 }
 
 variable "optional_network_name" {
-  description = "Network name to attach the server to (e.g. default)"
+  description = "Network name to attach the server to; must be provided. If the network does not exist will be fail."
   type        = string
-  default     = ""
+  nullable    = false
+
+  validation {
+    condition     = var.optional_network_name != ""
+    error_message = "optional_network_name must not be empty — please supply a network name."
+  }
 }
 
 variable "total" {
-  description = "Number of VMs to create"
+  description = "Number of VMs to create (minimum 2: at least one controller and one compute)"
   type        = number
-  default     = 1
+  default     = 2
+
+  validation {
+    condition     = var.total >= 2
+    error_message = "total must be at least 2 (one controller + one compute node)."
+  }
 }
 
 variable "server_password" {
-  description = "Password for the VMs (will be base64-encoded before passing to the API)"
+  description = "Password for the VMs (will be base64-encoded before passing to the API); must be supplied manually — no default."
   type        = string
-  default     = ""
   sensitive   = true
+  nullable    = false
+
+  validation {
+    condition     = var.server_password != ""
+    error_message = "server_password must not be empty — please supply a password."
+  }
 }

@@ -18,11 +18,11 @@ kolla_container_engine: "docker"
 ######################
 # Networking options
 ######################
-# API / management interface (ens3 - 192.168.95.0/24)
-network_interface: "ens3"
+# API / management interface (dynamically discovered from default network)
+network_interface: "${network_interface_name}"
 
-# Tunnel interface for Geneve (ens4 - 172.10.0.0/16)
-tunnel_interface: "ens4"
+# Tunnel interface for Geneve (dynamically discovered from optional network)
+tunnel_interface: "${tunnel_interface_name}"
 
 # No external/provider network needed for this test deployment
 # neutron_external_interface: ""
