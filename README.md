@@ -10,11 +10,7 @@ make terraform-container
 ## Setup Slurm
 
 ```shell
-cd /workspace/infra_slurm
-
-terraform init
-terraform plan
-terraform apply
+make slurm-up-via-terraform
 
 ## ssh to slurm headnode
 ssh cloud-user@x.x.x.x
@@ -25,11 +21,7 @@ ssh cloud-user@x.x.x.x
 
 ```shell
 ## execute in terraform container
-cd /workspace/infra_openstack
-
-terraform init
-terraform plan
-terraform apply
+make openstack-up-via-terraform
 
 # ssh to openstack bastion
 ssh cloud-user@y.y.y.y
@@ -54,6 +46,19 @@ kolla-ansible post-deploy       -i /etc/kolla/inventroy/
 ```
 
 
+## Add OpenStack Compute
+
+```shell
+kolla-ansible bootstrap-servers -i /etc/kolla/inventroy/    --limit SLURM-03-compute-tf 
+kolla-ansible prechecks         -i /etc/kolla/inventroy/    --limit SLURM-03-compute-tf 
+kolla-ansible pull              -i /etc/kolla/inventroy/    --limit SLURM-03-compute-tf 
+kolla-ansible deploy            -i /etc/kolla/inventroy/    --limit SLURM-03-compute-tf 
+```
+
+在 controller 上，強制openstack 發現新節點，不然要等五分鐘
+```shell
+docker exec -t nova_api nova-manage cell_v2 discover_hosts --verbose
+```
 
 ## RoadMap
 
@@ -61,6 +66,6 @@ kolla-ansible post-deploy       -i /etc/kolla/inventroy/
     * [x] OpenStack
     * [x] Slurm
 
-* [ ] Run Kolla-Ansible in Conatiner
+* [x] Run Kolla-Ansible in Conatiner
     * [x] Docker Container
-    * [ ] Singularity Container
+    * [x] Singularity Container

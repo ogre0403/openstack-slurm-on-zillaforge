@@ -4,6 +4,14 @@
 
 ### 設定容器內帳號的 UID/GID
 
+本映像檔的設計目標是完全相容於 Docker 與 Singularity (Apptainer) 兩種執行環境，且在兩種環境下皆能正確處理使用者權限。Docker 與 Singularity 在設計哲學上有著根本的差異：
+
+* Docker 預設為 Root： 容器啟動時預設具有 root 權限，通常會在 entrypoint.sh 中動態修改 UID/GID 並降權（Drop privileges）為一般使用者來執行主程式。
+
+* Singularity 預設為 Host User： 容器啟動時，強制綁定外部主機的當前使用者身分與權限（Non-root）。任何試圖在容器內執行需要 root 權限的操作都會遭遇致命錯誤。
+
+#### 使用Docker Conatiner
+
 `kolla-ansible/docker-compose.yaml` 內可透過環境變數設定容器中 `kolla` 帳號的 UID/GID：
 
 ```yaml
@@ -11,21 +19,19 @@ environment:
     - PUID=1000
     - PGID=1000
 ```
-
-容器啟動時，`kolla-ansible/entrypoint.sh` 會使用這兩個值執行：
-
-```shell
-groupmod -o -g "$PGID" kolla
-usermod  -o -u "$PUID" kolla
-```
-
-這樣做的目的，是讓容器內的 `kolla` 使用者和主機上的使用者維持相同的 UID/GID，避免 bind mount 進容器的檔案出現權限不一致的問題。對這個專案來說，`/etc/kolla` 與 `/etc/openstack` 都是從主機掛載進容器，若 UID/GID 不一致，常見情況會是：
-
-* 容器內可以看到檔案，但無法修改
-* 產生的新檔案在主機上變成其他擁有者
-* `kolla-ansible` 執行過程中出現權限錯誤
-
 如果主機上的開發帳號不是 `1000:1000`，可以直接調整 `PUID` 與 `PGID` 成對應值。
+這樣做的目的，是讓容器內的 `kolla` 使用者和主機上的使用者維持相同的 UID/GID，避免 bind mount 進容器的檔案出現權限不一致的問題。
+對這個專案來說，`/etc/kolla` 與 `/etc/openstack` 都是從主機掛載進容器
+
+
+#### 使用 Singularity Conatiner
+
+在Dockerfile裡，將 kolla 的 UID/GID 設定為 666000666 / 999000999 這種一般主機絕對不會使用的超高數值。
+如此一來，當 Singularity 以主機一般常用的UID進入容器時，容器內找不到 UID 的紀錄時，Singularity 就會自動在容器記憶體中動態生成正確的user紀錄。
+從此 whoami 與 $USER 將完美一致，徹底消滅身分錯亂。
+
+在 `kolla-ansible/docker-compose.yaml`，Singularity 中運行時 (id -u != 0)，腳本偵測到自己沒有 root 權限，主動放棄所有修改系統權限的嘗試，直接以當前主機使用者的原始身分執行命令。
+
 
 ### 為什麼要設定 `ANSIBLE_COLLECTIONS_PATH`
 

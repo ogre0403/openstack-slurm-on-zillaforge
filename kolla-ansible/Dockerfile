@@ -28,8 +28,8 @@ RUN     pip install git+https://opendev.org/openstack/kolla-ansible@stable/2024.
 
 
 # 建立預設帳號
-RUN groupadd -g 1000 kolla && \
-    useradd -u 1000 -g 1000 -m -s /bin/bash kolla
+RUN groupadd -g 999000999 kolla && \
+    useradd -u 666000666 -g 999000999 -m -s /bin/bash kolla
 
 
 ENV ANSIBLE_COLLECTIONS_PATH=/usr/share/ansible/collections

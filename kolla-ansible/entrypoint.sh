@@ -1,25 +1,36 @@
 #!/bin/bash
 
-TARGET_UID=${PUID:-1000}
-TARGET_GID=${PGID:-1000}
+# 檢查目前執行這個腳本的使用者是不是 root (UID 0)
+if [ "$(id -u)" = '0' ]; then
+    # ==========================================
+    # 這裡是 Docker 情境 (以 root 啟動)
+    # ==========================================
+    TARGET_UID=${PUID:-666000666}
+    TARGET_GID=${PGID:-999000999}
 
-groupmod -o -g "$TARGET_GID" kolla
-usermod -o -u "$TARGET_UID" kolla
+    groupmod -o -g "$TARGET_GID" kolla 2>/dev/null || true
+    usermod -o -u "$TARGET_UID" kolla 2>/dev/null || true
 
-# 檢查家目錄目前的擁有者 UID
-CURRENT_UID=$(stat -c "%u" /home/kolla)
+    CURRENT_UID=$(stat -c "%u" /home/kolla)
+    if [ "$CURRENT_UID" != "$TARGET_UID" ]; then
+        echo "Updating ownership of /home/kolla..."
+        chown -R kolla:kolla /home/kolla
+    fi
 
-# 如果目前的 UID 不等於目標 UID，才執行耗時的 chown -R
-if [ "$CURRENT_UID" != "$TARGET_UID" ]; then
-    echo "Updating ownership of /home/kolla to $TARGET_UID:$TARGET_GID. This may take a while..."
-    chown -R kolla:kolla /home/kolla
+    export HOME=/home/kolla
+    # 用 setpriv 降權並執行指令
+    exec setpriv --reuid=kolla --regid=kolla --init-groups "$@"
+
 else
-    echo "Ownership of /home/kolla is already correct. Skipping chown."
+    # ==========================================
+    # 這裡是 Singularity 情境 (以普通使用者啟動)
+    # ==========================================
+    # 因為已經是一般使用者了，不需要（也不能）做 usermod/chown/setpriv
+    # 直接用當前身分執行傳入的指令即可
+
+    # 確保 HOME 變數正確指向當前使用者的家目錄
+    export HOME=$(eval echo ~$(whoami))
+
+    exec "$@"
 fi
 
-# 【重點】用 setpriv 取代 gosu
-# --reuid: 重新設定 User
-# --regid: 重新設定 Group
-# --init-groups: 初始化該使用者的附加群組 (非常重要，否則可能沒有 docker 或 sudo 權限)
-export HOME=/home/kolla
-exec setpriv --reuid=kolla --regid=kolla --init-groups "$@"

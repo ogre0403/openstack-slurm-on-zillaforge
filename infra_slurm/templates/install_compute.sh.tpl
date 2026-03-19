@@ -24,7 +24,7 @@ echo "$NODE_IP $NODE_HOSTNAME" >> /etc/hosts
 echo "=> 安裝基礎套件"
 dnf install -y epel-release
 dnf config-manager --set-enabled crb
-dnf install -y munge munge-libs munge-devel slurm slurm-slurmd nfs-utils
+dnf install -y munge munge-libs munge-devel slurm slurm-slurmd nfs-utils apptainer
 
 # ---------- users ----------
 echo "=> 確保 slurm / munge 使用者與群組存在"

@@ -11,7 +11,7 @@ KOLLA_COMPOSE_FILE ?= kolla-ansible/docker-compose.yaml
 
 .PHONY: help terraform-container slurm-up-via-terraform slurm-destroy-via-terraform \
 	openstack-up-via-terraform openstack-down-via-terraform kolla-image kolla-up \
-	kolla-exec kolla-down
+	kolla-exec kolla-down kolla-push-local-registry
 
 help: ## Show available targets
 	@awk 'BEGIN {FS = ":.*## "; printf "Usage: make <target>\n\nTargets:\n"} /^[a-zA-Z0-9_.-]+:.*## / {printf "  %-32s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -56,6 +56,16 @@ kolla-image: ## Build the Kolla-Ansible image
 
 kolla-up: ## Start the Kolla-Ansible containers
 	docker compose -f $(KOLLA_COMPOSE_FILE) up -d
+
+kolla-push-local-registry: ## Tag and push the Kolla-Ansible image to the local registry
+	@set -e; \
+	host_ip=$$(ip route get 1.1.1.1 | awk '/src/ {print $$7; exit}'); \
+	if [ -z "$$host_ip" ]; then \
+		echo "Unable to determine host IP from default route"; \
+		exit 1; \
+	fi; \
+	docker tag kolla-ansible:$(KA_VER_TAG) $$host_ip:5000/kolla-ansible:$(KA_VER_TAG); \
+	docker push $$host_ip:5000/kolla-ansible:$(KA_VER_TAG)
 
 kolla-exec: ## Open a shell inside the Kolla-Ansible container
 	docker exec -u kolla -w /home/kolla -e HOME=/home/kolla -it kolla_ansible bash

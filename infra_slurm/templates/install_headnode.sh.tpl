@@ -25,7 +25,7 @@ dnf install -y epel-release
 dnf config-manager --set-enabled crb
 dnf install -y munge munge-libs munge-devel \
                slurm slurm-slurmd slurm-slurmctld slurm-slurmdbd \
-               nfs-utils mariadb-server
+               nfs-utils mariadb-server apptainer
 
 # ---------- users ----------
 echo "=> 確保 slurm / munge 使用者與群組存在"

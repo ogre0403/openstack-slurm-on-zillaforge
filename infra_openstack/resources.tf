@@ -72,6 +72,33 @@ EOF
 }
 
 # --------------------------------------------------------------------------
+# Configure Docker insecure registry on bastion after creation
+# (cannot be done in user_data because the bastion IP is only known after creation)
+# --------------------------------------------------------------------------
+
+resource "null_resource" "bastion_docker_daemon" {
+  depends_on = [zillaforge_server.bastion]
+
+  connection {
+    type     = "ssh"
+    host     = zillaforge_floating_ip.bastion.ip_address
+    user     = local.cloud_user
+    password = var.server_password
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "PASS='${var.server_password}'",
+      # Wait for user_data to finish installing and starting Docker
+      "while ! echo \"$PASS\" | sudo -S systemctl is-active --quiet docker 2>/dev/null; do sleep 5; done",
+      "echo \"$PASS\" | sudo -S mkdir -p /etc/docker",
+      "echo '{\"insecure-registries\":[\"${zillaforge_server.bastion.network_attachment[0].ip_address}:5000\"]}' | sudo -S tee /etc/docker/daemon.json",
+      "echo \"$PASS\" | sudo -S systemctl restart docker",
+    ]
+  }
+}
+
+# --------------------------------------------------------------------------
 # Worker VMs — two NICs, no Floating IP, count driven by var.total
 # --------------------------------------------------------------------------
 
