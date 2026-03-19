@@ -1,0 +1,28 @@
+# API key issued by the provider; required for authentication.
+api_key               = "your-api-key"
+
+# Project system code associated with the target project. Format GOV111222.
+project_sys_code      = "your-project-sys-code"
+
+# SSH keypair name to inject into the server.
+keypair_name          = "your-keypair-name"
+
+# Security group name to attach to the server.
+securitygroup_name    = "your-securitygroup-name"
+
+# Flavor name for the VM, for example CPU.small.
+flavor_name           = ""
+
+# Image repository and tag for the VM image.
+image_repository      = "rocky"
+image_tag             = "9"
+
+# Network name to attach to the VM; this "MUST" not be empty.
+optional_network_name = "your-network-name"
+
+# VM password
+server_password       = "your-password"
+
+# Number of VMs (includes controller and compute nodes) to create;
+# minimum value is 2, one controller and one compute node.
+total                 = 3

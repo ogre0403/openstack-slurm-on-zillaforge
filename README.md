@@ -4,6 +4,18 @@
 ## Prepare Terraform Container Environment
 
 ```shell
+git clone https://github.com/ogre0403/openstack-slurm-on-zillaforge.git
+cd openstack-slurm-on-zillaforge
+
+# create tfvars example files
+cp infra_openstack/terraform.tfvars.example infra_openstack/terraform.tfvars
+cp infra_slurm/terraform.tfvars.example infra_slurm/terraform.tfvars
+
+# edit terraform variables depends on your environment
+vim infra_openstack/terraform.tfvars
+vim infra_slurm/terraform.tfvars
+
+# launch terraform container
 make terraform-container
 ```
 
