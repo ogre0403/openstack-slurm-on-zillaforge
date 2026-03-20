@@ -26,7 +26,7 @@ server_password  = ""
 # SLURM DB password
 db_password      = ""
 
-# Number of compute node to create; minimum value is 1.
-compute_count    = 3
+# Total number of VMs to create (1 headnode + N compute); minimum value is 2.
+total            = 4
 
 

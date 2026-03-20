@@ -16,6 +16,6 @@ data "external" "nic_names" {
     user        = local.cloud_user
     password    = var.server_password
     default_ip  = zillaforge_server.bastion.network_attachment[0].ip_address
-    optional_ip = zillaforge_server.bastion.network_attachment[1].ip_address
+    optional_ip = try(zillaforge_server.bastion.network_attachment[1].ip_address, "")
   }
 }

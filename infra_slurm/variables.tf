@@ -64,14 +64,14 @@ variable "optional_network_name" {
   default     = null
 }
 
-variable "compute_count" {
-  description = "Number of Slurm compute nodes to create"
+variable "total" {
+  description = "Number of VMs to create (minimum 2: one headnode + at least one compute)"
   type        = number
   default     = 2
 
   validation {
-    condition     = var.compute_count >= 1
-    error_message = "compute_count must be at least 1."
+    condition     = var.total >= 2
+    error_message = "total must be at least 2 (one headnode + one compute node)."
   }
 }
 

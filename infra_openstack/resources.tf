@@ -65,9 +65,13 @@ EOF
     floating_ip_id     = zillaforge_floating_ip.bastion.id
   }
 
-  network_attachment {
-    network_id         = data.zillaforge_networks.optional.networks[0].id
-    security_group_ids = [data.zillaforge_security_groups.selected.security_groups[0].id]
+  dynamic "network_attachment" {
+    for_each = local.optional_network_id == null ? [] : [local.optional_network_id]
+
+    content {
+      network_id         = network_attachment.value
+      security_group_ids = [data.zillaforge_security_groups.selected.security_groups[0].id]
+    }
   }
 }
 
@@ -116,8 +120,12 @@ resource "zillaforge_server" "nodes" {
     security_group_ids = [data.zillaforge_security_groups.selected.security_groups[0].id]
   }
 
-  network_attachment {
-    network_id         = data.zillaforge_networks.optional.networks[0].id
-    security_group_ids = [data.zillaforge_security_groups.selected.security_groups[0].id]
+  dynamic "network_attachment" {
+    for_each = local.optional_network_id == null ? [] : [local.optional_network_id]
+
+    content {
+      network_id         = network_attachment.value
+      security_group_ids = [data.zillaforge_security_groups.selected.security_groups[0].id]
+    }
   }
 }

@@ -22,7 +22,8 @@ kolla_container_engine: "docker"
 network_interface: "${network_interface_name}"
 
 # Tunnel interface for Geneve (dynamically discovered from optional network)
-tunnel_interface: "${tunnel_interface_name}"
+# Falls back to network_interface when no optional network is configured
+tunnel_interface: "${tunnel_interface_name != "" ? tunnel_interface_name : network_interface_name}"
 
 # No external/provider network needed for this test deployment
 # neutron_external_interface: ""

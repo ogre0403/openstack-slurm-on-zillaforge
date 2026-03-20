@@ -14,6 +14,7 @@ provider "zillaforge" {
 }
 
 locals {
-  cloud_user   = "cloud-user"
-  project_root = abspath("${path.root}/..")
+  cloud_user          = "cloud-user"
+  project_root        = abspath("${path.root}/..")
+  optional_network_id = try(data.zillaforge_networks.optional[0].networks[0].id, null)
 }

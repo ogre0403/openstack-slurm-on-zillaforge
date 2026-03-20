@@ -16,14 +16,9 @@ data "zillaforge_networks" "default" {
 }
 
 data "zillaforge_networks" "optional" {
-  name = var.optional_network_name
+  count = var.optional_network_name == null || var.optional_network_name == "" ? 0 : 1
 
-  lifecycle {
-    postcondition {
-      condition     = length(self.networks) > 0
-      error_message = "Network '${var.optional_network_name}' does not exist. Please create it manually before running terraform apply."
-    }
-  }
+  name = var.optional_network_name
 }
 
 data "zillaforge_security_groups" "selected" {

@@ -17,8 +17,9 @@ flavor_name           = ""
 image_repository      = "rocky"
 image_tag             = "9"
 
-# Network name to attach to the VM; this "MUST" not be empty.
-optional_network_name = "your-network-name"
+# Optional network name to attach as a second NIC.
+# If omitted or not found, the servers will use only the default network.
+# optional_network_name = "your-network-name"
 
 # VM password
 server_password       = "your-password"

@@ -44,7 +44,7 @@ cd ~/resource_manage
 make kolla-up
 
 # access kolla-ansible container as kolla user
-make kolla-exec
+make kolla-shell
 
 # generate password
 kolla-genpwd

@@ -52,7 +52,7 @@ resource "zillaforge_server" "headnode" {
 # --------------------------------------------------------------------------
 
 resource "zillaforge_server" "compute" {
-  count = var.compute_count
+  count = var.total - 1
 
   name      = local.compute_hostnames[count.index]
   flavor_id = data.zillaforge_flavors.selected.flavors[0].id

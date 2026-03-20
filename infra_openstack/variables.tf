@@ -59,14 +59,9 @@ variable "default_network_name" {
 }
 
 variable "optional_network_name" {
-  description = "Network name to attach the server to; must be provided. If the network does not exist will be fail."
+  description = "Optional network name to attach the server to. If omitted or not found, the servers will use only the default network."
   type        = string
-  nullable    = false
-
-  validation {
-    condition     = var.optional_network_name != ""
-    error_message = "optional_network_name must not be empty — please supply a network name."
-  }
+  default     = null
 }
 
 variable "total" {

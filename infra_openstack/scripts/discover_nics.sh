@@ -31,9 +31,12 @@ done
 NETWORK_INTERFACE=$(sshpass -p "$PASSWORD" ssh $SSH_OPTS "$USER@$HOST" \
   "ip -o -4 addr show | awk '\$4 ~ /^${DEFAULT_IP}\// {print \$2}'" 2>/dev/null | head -1)
 
-# Discover NIC name for optional/tunnel network
-TUNNEL_INTERFACE=$(sshpass -p "$PASSWORD" ssh $SSH_OPTS "$USER@$HOST" \
-  "ip -o -4 addr show | awk '\$4 ~ /^${OPTIONAL_IP}\// {print \$2}'" 2>/dev/null | head -1)
+# Discover NIC name for optional/tunnel network (only if an optional IP was provided)
+TUNNEL_INTERFACE=""
+if [ -n "$OPTIONAL_IP" ]; then
+  TUNNEL_INTERFACE=$(sshpass -p "$PASSWORD" ssh $SSH_OPTS "$USER@$HOST" \
+    "ip -o -4 addr show | awk '\$4 ~ /^${OPTIONAL_IP}\// {print \$2}'" 2>/dev/null | head -1)
+fi
 
 # Return JSON to Terraform
 echo "{\"network_interface\":\"${NETWORK_INTERFACE}\",\"tunnel_interface\":\"${TUNNEL_INTERFACE}\"}"
