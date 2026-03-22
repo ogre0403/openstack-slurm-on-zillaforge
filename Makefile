@@ -7,14 +7,22 @@ TERRAFORM ?= terraform
 SLURM_DIR ?= infra_slurm
 OPENSTACK_DIR ?= infra_openstack
 KOLLA_DOCKERFILE ?= kolla-ansible/Dockerfile
+KOLLA_SINGULARITYFILE ?= kolla-ansible/Singularity.def
 KOLLA_COMPOSE_FILE ?= kolla-ansible/docker-compose.yaml
+SIF_FILE ?= kolla-ansible.sif
 
-.PHONY: help terraform-container slurm-up-via-terraform slurm-destroy-via-terraform \
-	openstack-up-via-terraform openstack-down-via-terraform kolla-image kolla-up \
-	kolla-shell kolla-down kolla-image-push
+KOLLA_CMD ?= 
+LIMIT ?=
+ALLOWED_KOLLA_CMDS := bootstrap-servers prechecks pull deploy
+
+.PHONY: help terraform-container \
+		slurm-up-via-terraform slurm-destroy-via-terraform \
+		openstack-up-via-terraform openstack-down-via-terraform \
+		kolla-image kolla-up kolla-shell kolla-down \
+		singilarity-image singilarity-shell singilarity-deploy-job
 
 help: ## Show available targets
-	@awk 'BEGIN {FS = ":.*## "; printf "Usage: make <target>\n\nTargets:\n"} /^[a-zA-Z0-9_.-]+:.*## / {printf "  %-32s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*## "; printf "Usage: make <target>\n\nTargets:\n"} /^[a-zA-Z0-9_.-]+:.*## / {printf "  %-32s %s\n", $$1, $$2; if ($$1 == "openstack-down-via-terraform" || $$1 == "kolla-shell" || $$1 == "help") printf "\n"}' $(MAKEFILE_LIST)
 
 terraform-container: ## Open a container with Terraform dependencies
 	@set -e; \
@@ -54,16 +62,6 @@ openstack-down-via-terraform: ## Initialize and destroy the OpenStack stack
 kolla-image: ## Build the Kolla-Ansible image
 	docker build -t kolla-ansible:$(KA_VER_TAG) -f $(KOLLA_DOCKERFILE) .
 
-kolla-image-push: ## Tag and push the Kolla-Ansible image to the local registry
-	@set -e; \
-	host_ip=$$(ip route get 1.1.1.1 | awk '/src/ {print $$7; exit}'); \
-	if [ -z "$$host_ip" ]; then \
-		echo "Unable to determine host IP from default route"; \
-		exit 1; \
-	fi; \
-	docker tag kolla-ansible:$(KA_VER_TAG) $$host_ip:5000/kolla-ansible:$(KA_VER_TAG); \
-	docker push $$host_ip:5000/kolla-ansible:$(KA_VER_TAG)
-
 kolla-up: ## Start the Kolla-Ansible containers
 	docker compose -f $(KOLLA_COMPOSE_FILE) up -d
 
@@ -72,3 +70,28 @@ kolla-down: ## Stop the Kolla-Ansible containers
 
 kolla-shell: ## Open a shell inside the Kolla-Ansible container
 	docker exec -u kolla -w /home/kolla -e HOME=/home/kolla -it kolla_ansible bash
+
+singilarity-image: ## Build the Singularity Kolla-Ansible image
+	singularity build $(SIF_FILE) $(KOLLA_SINGULARITYFILE)
+
+singilarity-shell: ## Open Singularity Shell
+	singularity shell \
+	-B kolla-ansible/etc/kolla/:/etc/kolla \
+	-B kolla-ansible/etc/openstack/:/etc/openstack \
+	$(SIF_FILE)
+
+singilarity-submit: ## Submit a Singularity Job to run Kolla-Ansible Command
+	@if ! printf '%s\n' $(ALLOWED_KOLLA_CMDS) | grep -qx -- "$(KOLLA_CMD)"; then \
+		echo "ERROR: KOLLA_CMD must be one of: $(ALLOWED_KOLLA_CMDS)"; \
+		exit 1; \
+	fi
+	@if [ -z "$(strip $(LIMIT))" ]; then \
+		echo "ERROR: LIMIT must be set (for example: make KOLLA_CMD=deploy LIMIT=<NODE_NAME> singilarity-submit)"; \
+		exit 1; \
+	fi
+	srun -N 1 -J $(KOLLA_CMD) \
+	singularity exec \
+	-B kolla-ansible/etc/kolla/:/etc/kolla \
+	-B kolla-ansible/etc/openstack/:/etc/openstack \
+	$(SIF_FILE) \
+	kolla-ansible $(KOLLA_CMD) -i /etc/kolla/inventroy/   --limit $(LIMIT)
