@@ -24,16 +24,18 @@ sequenceDiagram
 
     C2->>C2: submit.sh add
     Note over C2: NODE_LIST=slurm-compute-2,slurm-compute-3<br/>(scontrol show hostnames)
+
     C2->>C2: singularity exec kolla-ansible.sif<br/>add_computes.sh NODE_LIST
+    rect rgb(243, 238, 237)
 
-    loop bootstrap-servers -> prechecks -> pull -> deploy
-        C2->>C2: kolla-ansible cmd --limit NODE_LIST
-        C2->>C3: kolla-ansible cmd --limit NODE_LIST
+        loop bootstrap-servers -> prechecks -> pull -> deploy
+            C2->>C2: kolla-ansible cmd --limit NODE_LIST
+            C2->>C3: kolla-ansible cmd --limit NODE_LIST
+        end
+
+        C2-->>Ctrl: nova-compute registered
+        C3-->>Ctrl: nova-compute registered
     end
-
-    C2-->>Ctrl: nova-compute registered
-    C3-->>Ctrl: nova-compute registered
-
     Note over C2: sleep infinity & wait for SIGUSR1 to recycle
 ```
 
@@ -69,21 +71,22 @@ sequenceDiagram
     Note over C1: NODE_LIST = squeue -j JOB_ID -> hostnames<br/>-> slurm-compute-2,slurm-compute-3
     C1->>C1: singularity exec kolla-ansible.sif<br/>del_computes.sh NODE_LIST
 
-    loop each NODE in [slurm-compute-2, slurm-compute-3]
-        C1->>Ctrl: openstack compute service set --disable NODE nova-compute
+    rect rgb(243, 238, 237)
+        loop each NODE in [slurm-compute-2, slurm-compute-3]
+            C1->>Ctrl: openstack compute service set --disable NODE nova-compute
+        end
+
+        C1->>C2: kolla-ansible stop --limit NODE_LIST
+        C1->>C3: kolla-ansible stop --limit NODE_LIST
+
+        loop each NODE in [slurm-compute-2, slurm-compute-3]
+            C1->>Ctrl: openstack network agent delete (NODE)
+            C1->>Ctrl: openstack compute service delete (NODE)
+        end
+
+        C1->>C2: kolla-ansible destroy --limit NODE_LIST
+        C1->>C3: kolla-ansible destroy --limit NODE_LIST
     end
-
-    C1->>C2: kolla-ansible stop --limit NODE_LIST
-    C1->>C3: kolla-ansible stop --limit NODE_LIST
-
-    loop each NODE in [slurm-compute-2, slurm-compute-3]
-        C1->>Ctrl: openstack network agent delete (NODE)
-        C1->>Ctrl: openstack compute service delete (NODE)
-    end
-
-    C1->>C2: kolla-ansible destroy --limit NODE_LIST
-    C1->>C3: kolla-ansible destroy --limit NODE_LIST
-
     C1->>HN: scancel --batch --signal=SIGUSR1 JOB_ID
     HN-->>C2: SIGUSR1
     C2->>C2: trap SIGUSR1 -> exit 0

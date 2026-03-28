@@ -18,16 +18,18 @@ OCCUPY_NUM ?=
 
 JOB_ID ?=
 
-.PHONY: help terraform-container \
-		slurm-up-via-terraform slurm-destroy-via-terraform \
-		openstack-up-via-terraform openstack-down-via-terraform \
+DEST ?=
+
+.PHONY: help terraform-container ssh-to \
+		slurm-up slurm-down \
+		openstack-up openstack-down \
 		kolla-image kolla-up kolla-shell kolla-down \
 		singilarity-image singilarity-shell \
 		singilarity-srun-shrink \
 		singilarity-sbatch-expand singilarity-sbatch-shrink
 
 help: ## Show available targets
-	@awk 'BEGIN {FS = ":.*## "; printf "Usage: make <target>\n\nTargets:\n"} /^[a-zA-Z0-9_.-]+:.*## / {printf "  %-32s %s\n", $$1, $$2; if ($$1 == "openstack-down-via-terraform" || $$1 == "kolla-shell" || $$1 == "help") printf "\n"}' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*## "; printf "Usage: make <target>\n\nTargets:\n"} /^[a-zA-Z0-9_.-]+:.*## / {printf "  %-32s %s\n", $$1, $$2; if ($$1 == "ssh-to" || $$1 == "kolla-shell" || $$1 == "help") printf "\n"}' $(MAKEFILE_LIST)
 
 terraform-container: ## Open a container with Terraform dependencies
 	@set -e; \
@@ -44,26 +46,40 @@ terraform-container: ## Open a container with Terraform dependencies
 		exit 1; \
 	fi; \
 	echo "Using $(TF_IMAGE):$$selected_tag"; \
-	docker run -ti --rm -v $$(pwd):/workspace -e TFENV_AUTO_INSTALL=false \
+	docker run -ti --rm -v $$(pwd):/workspace -v $$HOME/.ssh/id_rsa:/root/.ssh/id_rsa:ro \
+	-e TFENV_AUTO_INSTALL=false \
 	--workdir /workspace $(TF_IMAGE):$$selected_tag sh -c 'apk add make openssh rsync sshpass && bash'
 
-slurm-up-via-terraform: ## Initialize, plan, and apply the Slurm stack
+slurm-up: ## Initialize, plan, and apply the Slurm stack
 	$(TERRAFORM) -chdir=$(SLURM_DIR) init
 	$(TERRAFORM) -chdir=$(SLURM_DIR) plan
 	$(TERRAFORM) -chdir=$(SLURM_DIR) apply
 
-slurm-destroy-via-terraform: ## Initialize and destroy the Slurm stack
+slurm-down: ## Initialize and destroy the Slurm stack
 	$(TERRAFORM) -chdir=$(SLURM_DIR) init
 	$(TERRAFORM) -chdir=$(SLURM_DIR) destroy
 
-openstack-up-via-terraform: ## Initialize, plan, and apply the OpenStack stack
+openstack-up: ## Initialize, plan, and apply the OpenStack stack
 	$(TERRAFORM) -chdir=$(OPENSTACK_DIR) init
 	$(TERRAFORM) -chdir=$(OPENSTACK_DIR) plan
 	$(TERRAFORM) -chdir=$(OPENSTACK_DIR) apply
 
-openstack-down-via-terraform: ## Initialize and destroy the OpenStack stack
+openstack-down: ## Initialize and destroy the OpenStack stack
 	$(TERRAFORM) -chdir=$(OPENSTACK_DIR) init
 	$(TERRAFORM) -chdir=$(OPENSTACK_DIR) destroy
+
+ssh-to: ## SSH into slurm (headnode) or openstack (bastion) using Terraform floating IP (DEST=slurm|openstack)
+	@if [ "$(DEST)" != "slurm" ] && [ "$(DEST)" != "openstack" ]; then \
+		echo "ERROR: DEST must be 'slurm' or 'openstack' (e.g. make DEST=slurm ssh-to)"; \
+		exit 1; \
+	fi
+	@if [ "$(DEST)" = "slurm" ]; then \
+		ip=$$($(TERRAFORM) -chdir=$(SLURM_DIR) output -raw headnode_floating_ip); \
+	else \
+		ip=$$($(TERRAFORM) -chdir=$(OPENSTACK_DIR) output -raw bastion_floating_ip); \
+	fi; \
+	echo "Connecting to $$ip ..."; \
+	ssh -o StrictHostKeyChecking=no cloud-user@$$ip
 
 kolla-image: ## Build the Kolla-Ansible image
 	docker build -t kolla-ansible:$(KA_VER_TAG) -f $(KOLLA_DOCKERFILE) .
