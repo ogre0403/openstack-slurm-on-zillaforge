@@ -161,3 +161,7 @@ make PARTITION=<PARTITION> JOB_ID=<JOB_ID> singilarity-sbatch-shrink
 * [x] Run Kolla-Ansible in Slurm Job
   * [x] Add new node
   * [x] Delete existing node
+
+* [ ] FIX:
+  * [x] Squeue cannot find allocated nodelist for completed add job
+  * [ ] Export Horizon public endpoitn

@@ -31,7 +31,7 @@ if [ "$ACTION" = "add" ]; then
     NODE_LIST=$(scontrol show hostnames | paste -sd ',')
     PAYLOAD_SCRIPT="add_computes.sh"
 elif [ "$ACTION" = "del" ]; then
-    NODE_LIST=$(scontrol show hostnames $(squeue -j $OCCUPY_JOB_ID -h -o "%N") | paste -sd, -)
+    NODE_LIST=$(scontrol show hostnames $(sacct -j $OCCUPY_JOB_ID -P -n -X -o NodeList) | paste -sd, -)
     PAYLOAD_SCRIPT="del_computes.sh"
 else
     echo "Usage: submit <add|del> [OCCUPY_JOB_ID]"

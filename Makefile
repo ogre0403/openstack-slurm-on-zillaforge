@@ -113,7 +113,7 @@ singilarity-shell: ## Open Singularity Shell
 	singularity shell \
 	-B kolla-ansible/etc/kolla/:/etc/kolla \
 	-B kolla-ansible/etc/openstack/:/etc/openstack \
-	-B playbook:/playbook" \
+	-B playbook:/playbook \
 	$(SIF_FILE)
 
 singilarity-srun-expand: ## srun expand compute nodes
