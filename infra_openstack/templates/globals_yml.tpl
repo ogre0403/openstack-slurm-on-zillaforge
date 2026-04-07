@@ -34,9 +34,16 @@ tunnel_interface: "${tunnel_interface_name != "" ? tunnel_interface_name : netwo
 # Point VIP directly to the single controller IP.
 ###################
 kolla_internal_vip_address: "${controller_ip}"
+kolla_external_vip_address: "${enable_controller_fip ? controller_fip : controller_ip}"
 enable_haproxy: "no"
 enable_keepalived: "no"
 enable_proxysql: "no"
+
+###################
+# Horizon default port
+###################
+horizon_port: 8080
+horizon_tls_port: 8443
 
 ###################
 # OpenStack services - minimal set

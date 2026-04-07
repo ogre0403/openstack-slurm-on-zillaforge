@@ -106,6 +106,15 @@ resource "null_resource" "bastion_docker_daemon" {
 # --------------------------------------------------------------------------
 # Worker VMs — two NICs, no Floating IP, count driven by var.total
 # --------------------------------------------------------------------------
+# Controller Floating IP (optional — only when enable_controller_fip = true)
+# --------------------------------------------------------------------------
+
+resource "zillaforge_floating_ip" "controller" {
+  count = var.enable_controller_fip ? 1 : 0
+  name  = format("%s-controller-tf-fip", var.node_name_prefix)
+}
+
+# --------------------------------------------------------------------------
 
 resource "zillaforge_server" "nodes" {
   count = var.total
@@ -124,6 +133,7 @@ USERDATA
   network_attachment {
     network_id         = data.zillaforge_networks.default.networks[0].id
     security_group_ids = [data.zillaforge_security_groups.selected.security_groups[0].id]
+    floating_ip_id     = (count.index == 0 && var.enable_controller_fip) ? zillaforge_floating_ip.controller[0].id : null
   }
 
   dynamic "network_attachment" {

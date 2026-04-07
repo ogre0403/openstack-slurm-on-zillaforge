@@ -86,3 +86,9 @@ variable "server_password" {
     error_message = "server_password must not be empty — please supply a password."
   }
 }
+
+variable "enable_controller_fip" {
+  description = "When true, allocate a Floating IP for the controller node and use it as kolla_external_vip_address. When false, kolla_external_vip_address falls back to the same value as kolla_internal_vip_address."
+  type        = bool
+  default     = false
+}
