@@ -70,9 +70,9 @@ Outputs:
 
 default_network_ips = {
   "SLURM-01-headnode-tf" = "192.168.95.55"
-  "SLURM-02-compute-tf" = "192.168.95.214"
-  "SLURM-03-compute-tf" = "192.168.95.180"
-  "SLURM-04-compute-tf" = "192.168.95.35"
+  "SLURM-02-worker-tf" = "192.168.95.214"
+  "SLURM-03-worker-tf" = "192.168.95.180"
+  "SLURM-04-worker-tf" = "192.168.95.35"
 }
 headnode_floating_ip = "x.x.x.x"
 
