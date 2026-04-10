@@ -111,6 +111,8 @@ singularity-image: ## Build the Singularity Kolla-Ansible image
 
 singularity-shell: ## Open Singularity Shell
 	singularity shell \
+	--env OS_CLOUD=kolla-admin-internal \
+	--env OS_CLIENT_CONFIG_FILE=/etc/kolla/clouds.yaml \
 	-B kolla-ansible/etc/kolla/:/etc/kolla \
 	-B kolla-ansible/etc/openstack/:/etc/openstack \
 	-B playbook:/playbook \

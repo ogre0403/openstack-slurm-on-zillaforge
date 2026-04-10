@@ -23,7 +23,7 @@ make terraform-container
 
 ```shell
 ## execute in terraform container
-make openstack-up-via-terraform
+make openstack-up
 
 ...
 
@@ -63,7 +63,7 @@ kolla-ansible post-deploy       -i /etc/kolla/inventroy/
 ## Setup Slurm
 
 ```shell
-make slurm-up-via-terraform
+make slurm-up
 ...
 
 Outputs:
@@ -80,7 +80,7 @@ headnode_floating_ip = "x.x.x.x"
 make DEST=slurm ssh-to
 
 cd ~/resource_manage
-sudo make singilarity-image
+sudo make singularity-image
 
 ```
 
@@ -94,16 +94,16 @@ Whole `inventroy` information and `passwords.yml` MUST be shared.
 ```shell
 # Copy passwords.yml & globals.yml from "EXISTING" OpenStack Cluster
 
-export BASTION_FIP=x.x.x.x
-scp cloud-user@${BASTION_FIP}:~/resource_manage/kolla-ansible/etc/kolla/passwords.yml    ~/resource_manage/kolla-ansible/etc/kolla/
-scp cloud-user@${BASTION_FIP}:~/resource_manage/kolla-ansible/etc/kolla/globals.yml      ~/resource_manage/kolla-ansible/etc/kolla/
+export BASTION_IP=192.168.x.x
+scp cloud-user@${BASTION_IP}:~/resource_manage/kolla-ansible/etc/kolla/passwords.yml    ~/resource_manage/kolla-ansible/etc/kolla/
+scp cloud-user@${BASTION_IP}:~/resource_manage/kolla-ansible/etc/kolla/globals.yml      ~/resource_manage/kolla-ansible/etc/kolla/
 ```
 
-### Inside a singilarity shell run commands
+### Inside a singularity shell run commands
 
 ```shell
 # Start a shell for singularity SIF
-make singilarity-shell
+make singularity-shell
 
 # Execute commands in the singularity shell
 kolla-ansible bootstrap-servers -i /etc/kolla/inventroy/    --limit <NODE_NAME>
@@ -116,7 +116,7 @@ kolla-ansible deploy            -i /etc/kolla/inventroy/    --limit <NODE_NAME>
 
 ```shell
 # Submit a slurm job, use singularity container to run Kolla-Ansible Commands
-make PARTITION=<partition> OCCUPY_NUM=<num> singilarity-sbatch-expand
+make PARTITION=<partition> OCCUPY_NUM=<num> singularity-sbatch-expand
 
 ```
 
@@ -128,23 +128,23 @@ OpenStack credentials are **MUST** required. That is because some OpenStack admi
 
 
 ```shell
-export BASTION_FIP=x.x.x.x
-scp cloud-user@${BASTION_FIP}:~/resource_manage/kolla-ansible/etc/kolla/admin-openrc.sh  ~/resource_manage/kolla-ansible/etc/kolla/
-scp cloud-user@${BASTION_FIP}:~/resource_manage/kolla-ansible/etc/kolla/clouds.yaml      ~/resource_manage/kolla-ansible/etc/kolla/
+export BASTION_IP=192.168.x.x
+scp cloud-user@${BASTION_IP}:~/resource_manage/kolla-ansible/etc/kolla/admin-openrc.sh  ~/resource_manage/kolla-ansible/etc/kolla/
+scp cloud-user@${BASTION_IP}:~/resource_manage/kolla-ansible/etc/kolla/clouds.yaml      ~/resource_manage/kolla-ansible/etc/kolla/
 ```
 
 
 ### Submit a real time job for deleting nodes
 
 ```shell
-make PARTITION=<PARTITION> JOB_ID=<JOB_ID> singilarity-srun-shrink
+make PARTITION=<PARTITION> JOB_ID=<JOB_ID> singularity-srun-shrink
 ```
 
 
 ### Submit a Batch Job for deleting nodes
 
 ```shell
-make PARTITION=<PARTITION> JOB_ID=<JOB_ID> singilarity-sbatch-shrink
+make PARTITION=<PARTITION> JOB_ID=<JOB_ID> singularity-sbatch-shrink
 ```
 
 
@@ -162,6 +162,6 @@ make PARTITION=<PARTITION> JOB_ID=<JOB_ID> singilarity-sbatch-shrink
   * [x] Add new node
   * [x] Delete existing node
 
-* [ ] FIX:
+* [x] FIX:
   * [x] Squeue cannot find allocated nodelist for completed add job
-  * [ ] Export Horizon public endpoitn
+  * [x] Export Horizon public endpoint
