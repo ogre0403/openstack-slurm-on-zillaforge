@@ -90,6 +90,7 @@ enable_trove: "no"
 enable_venus: "no"
 enable_watcher: "no"
 enable_zun: "no"
+enable_nova_novncproxy: "no"
 
 ###################
 # Neutron - OVN
