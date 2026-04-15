@@ -24,7 +24,7 @@ echo "=> 安裝基礎套件"
 dnf install -y epel-release
 dnf config-manager --set-enabled crb
 dnf install -y munge munge-libs munge-devel \
-               slurm slurm-slurmd slurm-slurmctld slurm-slurmdbd \
+               slurm slurm-slurmd slurm-slurmctld slurm-slurmdbd slurm-pam_slurm \
                nfs-utils mariadb-server apptainer make tmux
 
 # ---------- users ----------
@@ -33,6 +33,12 @@ getent group slurm  >/dev/null || groupadd -r slurm
 getent passwd slurm >/dev/null || useradd -r -g slurm -s /bin/nologin -d /nonexistent slurm
 getent group munge  >/dev/null || groupadd -r munge
 getent passwd munge >/dev/null || useradd -r -g munge -s /bin/nologin -d /nonexistent munge
+
+# 建立 test-user (固定 UID/GID 1100，確保 NFS 掛載後各節點一致)
+echo "=> 建立 test-user 帳號 (用於 pam_slurm_adopt 功能驗證)"
+getent group test-user >/dev/null || groupadd -g 1100 test-user
+id test-user &>/dev/null     || useradd -m -u 1100 -g 1100 -s /bin/bash test-user
+echo "test-user:${test_user_password}" | chpasswd
 
 # ---------- MUNGE ----------
 echo "=> 設定 MUNGE"
@@ -101,7 +107,8 @@ SlurmdSpoolDir=/var/spool/slurmd
 SlurmUser=slurm
 StateSaveLocation=/var/spool/slurmctld
 SwitchType=switch/none
-TaskPlugin=task/affinity
+TaskPlugin=task/affinity,task/cgroup
+PrologFlags=contain
 InactiveLimit=0
 KillWait=30
 MinJobAge=300
@@ -142,6 +149,11 @@ systemctl enable --now slurmctld
 # Register cluster
 sleep 5
 sacctmgr -i add cluster "$CLUSTER_NAME" || true
+
+# 將 testuser 加入 Slurm 帳務系統，使其可提交作業
+echo "=> 在 Slurm 帳務系統中建立 testaccount 並新增 testuser"
+sacctmgr -i add account testaccount Cluster="$CLUSTER_NAME" Description="Test Account" || true
+sacctmgr -i add user test-user Account=testaccount Cluster="$CLUSTER_NAME" || true
 
 # ---------- Share config via NFS ----------
 echo "=> 將設定檔派發至共享目錄"

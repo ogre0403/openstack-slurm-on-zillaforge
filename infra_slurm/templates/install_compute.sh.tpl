@@ -24,7 +24,8 @@ echo "$NODE_IP $NODE_HOSTNAME" >> /etc/hosts
 echo "=> 安裝基礎套件"
 dnf install -y epel-release
 dnf config-manager --set-enabled crb
-dnf install -y munge munge-libs munge-devel slurm slurm-slurmd nfs-utils apptainer
+dnf install -y munge munge-libs munge-devel slurm slurm-slurmd slurm-pam_slurm \
+    nfs-utils apptainer checkpolicy policycoreutils-python-utils
 
 # ---------- users ----------
 echo "=> 確保 slurm / munge 使用者與群組存在"
@@ -32,6 +33,12 @@ getent group slurm  >/dev/null || groupadd -r slurm
 getent passwd slurm >/dev/null || useradd -r -g slurm -s /bin/nologin -d /nonexistent slurm
 getent group munge  >/dev/null || groupadd -r munge
 getent passwd munge >/dev/null || useradd -r -g munge -s /bin/nologin -d /nonexistent munge
+
+# 建立 test-user (固定 UID/GID 1100， home dir 來自 NFS 共享目錄，不建立本機目錄)
+echo "=> 建立 test-user 帳號 (no-create-home)"
+getent group test-user >/dev/null || groupadd -g 1100 test-user
+id test-user &>/dev/null     || useradd -M -u 1100 -g 1100 -s /bin/bash test-user
+echo "test-user:${test_user_password}" | chpasswd
 
 # ---------- NFS Client ----------
 echo "=> 設定 NFS Client 並掛載 $NFS_SHARE_DIR"
@@ -86,5 +93,34 @@ fi
 mkdir -p /var/spool/slurmd /var/log/slurm /run/slurm
 chown slurm:slurm /var/spool/slurmd /var/log/slurm /run/slurm
 systemctl enable --now slurmd
+
+# ---------- pam_slurm_adopt: access.conf ----------
+echo "=> 設定 /etc/security/access.conf"
+if ! grep -q "pam_slurm_adopt managed" /etc/security/access.conf 2>/dev/null; then
+    cat >> /etc/security/access.conf <<ACCESSCONF
+# --- pam_slurm_adopt managed block ---
++:root:ALL
++:cloud-user:ALL
+-:ALL:ALL
+# --- end pam_slurm_adopt managed block ---
+ACCESSCONF
+fi
+
+# ---------- pam_slurm_adopt: /etc/pam.d/sshd ----------
+echo "=> 設定 /etc/pam.d/sshd"
+if ! grep -q "pam_slurm_adopt.so" /etc/pam.d/sshd; then
+    sed -i '/^account.*include.*password-auth/a account    sufficient   pam_access.so' /etc/pam.d/sshd
+    sed -i '/^account    sufficient   pam_access.so/a -account   required     pam_slurm_adopt.so action_adopt_failure=deny action_generic_failure=deny' /etc/pam.d/sshd
+fi
+
+# ---------- pam_slurm_adopt: SELinux 設為 permissive ----------
+echo "=> 將 SELinux 設為 permissive (立即生效 + 永久生效)"
+setenforce 0 || true
+if [ -f /etc/selinux/config ]; then
+    sed -i 's/^SELINUX=enforcing/SELINUX=permissive/' /etc/selinux/config
+    sed -i 's/^SELINUX=disabled/SELINUX=permissive/' /etc/selinux/config
+fi
+
+systemctl restart sshd
 
 echo "========== Compute Node ($NODE_HOSTNAME) 安裝完成 =========="
