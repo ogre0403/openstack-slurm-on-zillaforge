@@ -22,14 +22,14 @@ DEST ?=
 
 .PHONY: help terraform-container ssh-to sync-to \
 		slurm-up slurm-down \
-		openstack-up openstack-down \
+		openstack-up openstack-down openstack-deploy \
 		kolla-image kolla-up kolla-shell kolla-down \
 		singularity-image singularity-shell \
 		singularity-srun-expand   singularity-srun-shrink \
 		singularity-sbatch-expand singularity-sbatch-shrink
 
 help: ## Show available targets
-	@awk 'BEGIN {FS = ":.*## "; printf "Usage: make <target>\n\nTargets:\n"} /^[a-zA-Z0-9_.-]+:.*## / {printf "  %-32s %s\n", $$1, $$2; if ($$1 == "sync-from" || $$1 == "kolla-shell" || $$1 == "help" || $$1 == "sync-to") printf "\n"}' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*## "; printf "Usage: make <target>\n\nTargets:\n"} /^[a-zA-Z0-9_.-]+:.*## / {printf "  %-32s %s\n", $$1, $$2; if ($$1 == "sync-from" || $$1 == "kolla-shell" || $$1 == "help" || $$1 == "sync-to" || $$1 == "openstack-deploy") printf "\n"}' $(MAKEFILE_LIST)
 
 terraform-container: ## Open a container with Terraform dependencies
 	@set -e; \
@@ -67,6 +67,28 @@ openstack-up: ## Initialize, plan, and apply the OpenStack stack
 openstack-down: ## Initialize and destroy the OpenStack stack
 	$(TERRAFORM) -chdir=$(OPENSTACK_DIR) init
 	$(TERRAFORM) -chdir=$(OPENSTACK_DIR) destroy
+
+
+openstack-deploy: ## Run full kolla-ansible deployment in the background
+	@ip=$$($(TERRAFORM) -chdir=$(OPENSTACK_DIR) output -raw bastion_floating_ip); \
+	if ssh -o StrictHostKeyChecking=no cloud-user@$$ip '[ -f ~/resource_manage/.kolla_deploy.done ]'; then \
+		echo "OpenStack deployment already completed on $$ip (.kolla_deploy.done exists)."; \
+		echo "If you need to re-run, remove the flag file on the bastion and run this target again."; \
+		exit 0; \
+	fi; \
+	if ssh -o StrictHostKeyChecking=no cloud-user@$$ip '[ -f ~/resource_manage/.kolla_deploy.inprogress ]'; then \
+		echo "Deployment is currently in progress on $$ip."; \
+		echo "Monitor progress with:"; \
+		echo "  ssh cloud-user@$$ip 'tail -f ~/resource_manage/kolla-deploy.log'"; \
+		exit 0; \
+	fi; \
+	echo "Launching background kolla-ansible deployment on $$ip ..."; \
+	ssh -o StrictHostKeyChecking=no cloud-user@$$ip \
+		"nohup bash ~/resource_manage/scripts/kolla_deploy.sh > /dev/null 2>&1 &"; \
+	echo ""; \
+	echo "Deployment is running in the background on $$ip."; \
+	echo "Monitor progress with:"; \
+	echo "  ssh cloud-user@$$ip 'tail -f ~/resource_manage/kolla-deploy.log'"
 
 ssh-to: ## SSH into slurm (headnode) or openstack (bastion) using Terraform floating IP (DEST=slurm|openstack)
 	@if [ "$(DEST)" != "slurm" ] && [ "$(DEST)" != "openstack" ]; then \

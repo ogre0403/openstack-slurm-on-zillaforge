@@ -6,7 +6,6 @@
 	"customizations": {
 		"vscode": {
 			"extensions": [
-				"GitHub.copilot-chat",
 				"isudox.vscode-jetbrains-keybindings",
 				"pjmiravalle.terraform-advanced-syntax-highlighting",
 				"vtkn.amazon-bedrock-copilot-chat",
