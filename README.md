@@ -37,26 +37,13 @@ default_network_ips = {
   "OPSK-03-compute-tf" = "192.168.95.174"
 }
 
-# ssh to openstack bastion
-make DEST=openstack ssh-to
-
-## execute in opnestack bastion
-cd ~/resource_manage
-# build and launch kolla-ansible via docker compose
-make kolla-up
-
-# access kolla-ansible container as kolla user
-make kolla-shell
-
-# generate password
-kolla-genpwd
-
-# kolla-ansible deploy step
-kolla-ansible bootstrap-servers -i /etc/kolla/inventroy/
-kolla-ansible prechecks         -i /etc/kolla/inventroy/
-kolla-ansible pull              -i /etc/kolla/inventroy/
-kolla-ansible deploy            -i /etc/kolla/inventroy/
-kolla-ansible post-deploy       -i /etc/kolla/inventroy/
+# deploy openstack using kolla-ansible, it will run 
+# kolla-ansible bootstrap-servers -i /etc/kolla/inventroy/
+# kolla-ansible prechecks         -i /etc/kolla/inventroy/
+# kolla-ansible pull              -i /etc/kolla/inventroy/
+# kolla-ansible deploy            -i /etc/kolla/inventroy/
+# kolla-ansible post-deploy       -i /etc/kolla/inventroy/
+make openstack-deploy
 ```
 
 
@@ -153,15 +140,15 @@ make PARTITION=<PARTITION> JOB_ID=<JOB_ID> singularity-sbatch-shrink
 * [x] Setup infrastructure from Terraform
   * [x] OpenStack
   * [x] Slurm
-
 * [x] Run Kolla-Ansible in Conatiner
   * [x] Docker Container
   * [x] Singularity Container
-
 * [x] Run Kolla-Ansible in Slurm Job
   * [x] Add new node
   * [x] Delete existing node
-
 * [x] FIX:
   * [x] Squeue cannot find allocated nodelist for completed add job
   * [x] Export Horizon public endpoint
+* [ ] Air Gap Install
+  * [x] Kolla Image from private Registry
+  * [ ] Install OS package

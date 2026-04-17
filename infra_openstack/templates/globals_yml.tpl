@@ -15,6 +15,15 @@ openstack_release: "2024.2"
 # Container engine
 kolla_container_engine: "docker"
 
+%{ if enable_private_registry ~}
+###################
+# Private Docker Registry
+###################
+#docker_registry: "${bastion_ip}:5000"
+#docker_namespace: "openstack.kolla"
+#docker_registry_insecure: "yes"
+%{ endif ~}
+
 ######################
 # Networking options
 ######################

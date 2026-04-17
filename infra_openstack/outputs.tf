@@ -19,3 +19,8 @@ output "default_network_ips" {
     { for s in zillaforge_server.nodes : s.name => s.network_attachment[0].ip_address }
   )
 }
+
+output "enable_private_registry" {
+  description = "Whether the private Docker registry is enabled on the bastion"
+  value       = var.enable_private_registry
+}

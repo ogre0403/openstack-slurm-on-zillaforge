@@ -17,7 +17,23 @@ if [ "$(id -u)" = '0' ]; then
         chown -R kolla:kolla /home/kolla
     fi
 
+    # ---- Docker socket GID 動態對齊 ----
+    # 取得 host 上 /var/run/docker.sock 的 GID，
+    # 在容器內建立（或更新）相同 GID 的 docker group，
+    # 再把 kolla 加進去，讓 kolla 可以存取 docker CLI。
+    if [ -S /var/run/docker.sock ]; then
+        DOCKER_SOCK_GID=$(stat -c '%g' /var/run/docker.sock)
+        if ! getent group docker > /dev/null 2>&1; then
+            groupadd -g "$DOCKER_SOCK_GID" docker
+        else
+            groupmod -g "$DOCKER_SOCK_GID" docker
+        fi
+        usermod -aG docker kolla
+        echo "docker group GID set to $DOCKER_SOCK_GID, kolla added."
+    fi
+
     export HOME=/home/kolla
+
     # 用 setpriv 降權並執行指令
     exec setpriv --reuid=kolla --regid=kolla --init-groups "$@"
 

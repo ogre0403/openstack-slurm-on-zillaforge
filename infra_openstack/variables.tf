@@ -92,3 +92,9 @@ variable "enable_controller_fip" {
   type        = bool
   default     = false
 }
+
+variable "enable_private_registry" {
+  description = "When true, configure Kolla-Ansible to pull images from the bastion's private Docker registry (port 5000) instead of the public registry."
+  type        = bool
+  default     = false
+}
