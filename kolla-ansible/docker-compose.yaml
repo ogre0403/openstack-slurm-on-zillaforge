@@ -21,4 +21,20 @@ services:
       - ${PWD}/kolla-ansible/etc/kolla:/etc/kolla:rw
       # /etc/openstack is required for kolla-ansible post-deploy
       - ${PWD}/kolla-ansible/etc/openstack:/etc/openstack:rw
+      # Docker socket for docker CLI access to host daemon
+      - /var/run/docker.sock:/var/run/docker.sock:rw
+      # Scripts for kolla-push etc.
+      - ${PWD}/scripts:/scripts:ro
     network_mode: host
+
+  registry:
+    container_name: registry
+    image: registry:2
+    restart: always
+    ports:
+      - "5000:5000"
+    volumes:
+      - registry_data:/var/lib/registry
+
+volumes:
+  registry_data:

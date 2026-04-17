@@ -11,11 +11,13 @@ resource "local_file" "nfs_shares" {
 
 resource "local_file" "globals_yml" {
   content = templatefile("${path.module}/templates/globals_yml.tpl", {
-    controller_ip          = zillaforge_server.nodes[0].network_attachment[0].ip_address
-    controller_fip         = var.enable_controller_fip ? zillaforge_floating_ip.controller[0].ip_address : ""
-    enable_controller_fip  = var.enable_controller_fip
-    network_interface_name = data.external.nic_names.result.network_interface
-    tunnel_interface_name  = data.external.nic_names.result.tunnel_interface
+    controller_ip             = zillaforge_server.nodes[0].network_attachment[0].ip_address
+    controller_fip            = var.enable_controller_fip ? zillaforge_floating_ip.controller[0].ip_address : ""
+    enable_controller_fip     = var.enable_controller_fip
+    network_interface_name    = data.external.nic_names.result.network_interface
+    tunnel_interface_name     = data.external.nic_names.result.tunnel_interface
+    bastion_ip                = zillaforge_server.bastion.network_attachment[0].ip_address
+    enable_private_registry   = var.enable_private_registry
   })
   filename = "${path.module}/../kolla-ansible/etc/kolla/globals.yml"
 }

@@ -10,27 +10,38 @@ RUN     dnf makecache \
         openssl-devel \
         python3-libselinux \
         sshpass \
-    &&  dnf clean all \
-    &&  rm -rf /var/cache/dnf
+        yum-utils \
+    &&  dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo \
+    &&  dnf -y install docker-ce-cli
 
 RUN     dnf -y install \
         python3.11 \
         python3.11-devel \
-    &&  dnf clean all \
-    &&  rm -rf /var/cache/dnf \
+        dbus-devel \
+        glib2-devel \
     && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9  1 \
     && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 2
 
+RUN     dnf -y install \
+        sudo \
+        iproute \
+    &&  dnf clean all \
+    &&  rm -rf /var/cache/dnf  \
+    &&  echo 'kolla ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers.d/kolla  \
+    &&  chmod 0440 /etc/sudoers.d/kolla
+
 RUN curl -sS https://bootstrap.pypa.io/get-pip.py | /usr/bin/python3.11
 
-RUN     pip install git+https://opendev.org/openstack/kolla-ansible@stable/2024.2 \
+RUN     pip install dbus-python \
+    &&  pip install docker \
+    &&  pip install git+https://opendev.org/openstack/kolla-ansible@stable/2024.2 \
     &&  pip install git+https://opendev.org/openstack/osc-placement@stable/2024.2 \
     &&  pip install git+https://opendev.org/openstack/python-openstackclient@stable/2024.2
 
 
 # 建立預設帳號
-RUN groupadd -g 999000999 kolla && \
-    useradd -u 666000666 -g 999000999 -m -s /bin/bash kolla
+RUN     groupadd -g 999000999 kolla \
+    &&  useradd -u 666000666 -g 999000999 -m -s /bin/bash kolla
 
 
 ENV ANSIBLE_COLLECTIONS_PATH=/usr/share/ansible/collections
@@ -42,5 +53,5 @@ COPY kolla-ansible/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+
 CMD ["/bin/bash"]
-# CMD ["sleep", "infinity"]
