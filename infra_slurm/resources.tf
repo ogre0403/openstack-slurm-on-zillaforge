@@ -129,12 +129,12 @@ resource "null_resource" "test_slurm" {
       USER="${local.cloud_user}"
 
       echo "=== Slurm Cluster Status ==="
-      sshpass -p "$PASS" ssh -o StrictHostKeyChecking=no "$USER@$FIP" \
+      sshpass -p "$PASS" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$USER@$FIP" \
         "echo '$PASS' | sudo -S sinfo" || true
 
       echo ""
       echo "=== Submitting Test Job ==="
-      sshpass -p "$PASS" ssh -o StrictHostKeyChecking=no "$USER@$FIP" \
+      sshpass -p "$PASS" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$USER@$FIP" \
         "srun --nodes=1 --ntasks=1 hostname" || true
 
       echo ""

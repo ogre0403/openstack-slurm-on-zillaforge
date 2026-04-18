@@ -101,7 +101,7 @@ ssh-to: ## SSH into slurm (headnode) or openstack (bastion) using Terraform floa
 		ip=$$($(TERRAFORM) -chdir=$(OPENSTACK_DIR) output -raw bastion_floating_ip); \
 	fi; \
 	echo "Connecting to $$ip ..."; \
-	ssh -o StrictHostKeyChecking=no cloud-user@$$ip
+	ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null cloud-user@$$ip
 
 sync-to: ## Sync local project (excluding .git) to remote resource_manage/ (DEST=slurm|openstack)
 	@if [ "$(DEST)" != "slurm" ] && [ "$(DEST)" != "openstack" ]; then \
@@ -114,7 +114,7 @@ sync-to: ## Sync local project (excluding .git) to remote resource_manage/ (DEST
 		ip=$$($(TERRAFORM) -chdir=$(OPENSTACK_DIR) output -raw bastion_floating_ip); \
 	fi; \
 	echo "Syncing to cloud-user@$$ip:resource_manage/ ..."; \
-	rsync -az --exclude '.git' -e "ssh -o StrictHostKeyChecking=no" $(MAKEFILE_DIR) cloud-user@$$ip:resource_manage/
+	rsync -az --exclude '.git' -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" $(MAKEFILE_DIR) cloud-user@$$ip:resource_manage/
 
 kolla-image: ## Build the Kolla-Ansible image
 	docker build -t kolla-ansible:$(KA_VER_TAG) -f $(KOLLA_DOCKERFILE) .
