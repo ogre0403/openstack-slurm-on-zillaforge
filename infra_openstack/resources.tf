@@ -46,7 +46,7 @@ echo "$PASS" | sudo -S dnf install -y sshpass make tmux vim
 # Copy SSH public key to all nodes (retry up to 10 times per node to wait for boot)
 %{for ip in [for s in zillaforge_server.nodes : s.network_attachment[0].ip_address]~}
 for i in $(seq 1 10); do
-  echo "$PASS" | sudo -S -u ${local.cloud_user} sshpass -p "$PASS" ssh-copy-id -o StrictHostKeyChecking=no ${local.cloud_user}@${ip} && break
+  echo "$PASS" | sudo -S -u ${local.cloud_user} sshpass -p "$PASS" ssh-copy-id -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${local.cloud_user}@${ip} && break
   sleep 15
 done
 %{endfor~}
