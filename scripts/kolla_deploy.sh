@@ -9,6 +9,8 @@ LOG="$PROJECT_DIR/kolla-deploy.log"
 KOLLA_EXEC="docker exec -u kolla -w /home/kolla -e HOME=/home/kolla kolla_ansible"
 INPROGRESS_FILE="$PROJECT_DIR/.kolla_deploy.inprogress"
 DONE_FILE="$PROJECT_DIR/.kolla_deploy.done"
+# Whether to use the bastion's private Docker registry (set by make openstack-deploy)
+ENABLE_PRIVATE_REGISTRY="${ENABLE_PRIVATE_REGISTRY:-false}"
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG"
@@ -46,7 +48,7 @@ for i in $(seq 1 30); do
     sleep 2
 done
 
-log "--- Step 3/7: kolla-genpwd ---"
+
 log "Waiting for /etc/kolla to become writable inside the container..."
 for i in $(seq 1 30); do
     if $KOLLA_EXEC test -w /etc/kolla 2>/dev/null; then
@@ -59,6 +61,21 @@ for i in $(seq 1 30); do
     fi
     sleep 2
 done
+
+# ---- Private registry: pull images from public registry then push to bastion ----
+if [ "$ENABLE_PRIVATE_REGISTRY" = "true" ]; then
+    # LOCAL_IP=$(hostname -I | cut -d ' ' -f 1)
+    # REGISTRY_ADDR="${LOCAL_IP}:5000"
+    log "--- Step 2a/7: private registry enabled — kolla-ansible pull (public registry) ---"
+    make kolla-pull 2>&1 | tee -a "$LOG"
+
+    log "--- Step 2b/7: private registry enabled — pushing images ---"
+    make kolla-push 2>&1 | tee -a "$LOG"
+    log "Images pushed to private registry. Subsequent deploy steps will use it."
+fi
+# ---------------------------------------------------------------------------------
+
+log "--- Step 3/7: kolla-genpwd ---"
 $KOLLA_EXEC kolla-genpwd 2>&1 | tee -a "$LOG"
 
 log "--- Step 4/7: bootstrap-servers ---"
