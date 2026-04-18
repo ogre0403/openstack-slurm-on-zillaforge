@@ -40,6 +40,14 @@ getent group test-user >/dev/null || groupadd -g 1100 test-user
 id test-user &>/dev/null     || useradd -m -u 1100 -g 1100 -s /bin/bash test-user
 echo "test-user:${test_user_password}" | chpasswd
 
+
+# ---------- sudoers ----------
+echo "=> 設定 sudoers 權限"
+cat > /etc/sudoers.d/cloud-user <<SUDOERS
+${sudoers_content}
+SUDOERS
+chmod 0440 /etc/sudoers.d/cloud-user
+
 # ---------- MUNGE ----------
 echo "=> 設定 MUNGE"
 if [ ! -f /etc/munge/munge.key ]; then
