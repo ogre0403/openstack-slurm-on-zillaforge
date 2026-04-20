@@ -48,3 +48,44 @@
         name: slurmd
         state: started
         enabled: true
+
+    - name: RESUME node in Slurm
+    # 註解: 獲取具管理員權限的使用者，並在 Slurm 叢集中將 resume 該節點。
+      ansible.builtin.shell: |
+        THIS_NODE=$(hostname -s)
+        SLURM_ADMIN=$(sacctmgr show user withassoc format=user,adminlevel -n -P | grep -i 'Administ' | cut -d'|' -f1 | head -n 1)
+        
+        if [ -z "$SLURM_ADMIN" ]; then
+          echo "Error: Cannot find Slurm Administrator account."
+          exit 1
+        fi
+        #echo "RUN: sudo su - \"$SLURM_ADMIN\" -c \"scontrol update NodeName=${THIS_NODE} State=RESUME \""
+        sudo su - "$SLURM_ADMIN" -c "scontrol update NodeName=${THIS_NODE} State=RESUME"
+      args:
+        executable: /bin/bash
+
+- name: Start NFS client related services
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Start and enable NFS client related services
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        state: started
+        enabled: true
+      loop:
+        - rpcbind.socket
+        - rpcbind.service
+        - nfs-client.target
+        - nfs-common.service
+        - nfs-utils.service
+        - autofs.service
+      ignore_errors: true
+      when: false
+
+    - name: Mount all NFS file systems
+      ansible.builtin.shell: mount -a -t nfs,nfs4 || true
+      args:
+        executable: /bin/bash
+      when: false
