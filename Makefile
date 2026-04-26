@@ -16,17 +16,16 @@ LOCAL_IP ?= $(shell hostname -I | cut -d ' ' -f 1)
 REGISTRY_ADDR ?= $(LOCAL_IP):5000
 # Pass -it only when running interactively (i.e. stdout is a TTY)
 DOCKER_TTY := $(shell [ -t 1 ] && echo "-it")
-
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+PORTAL_DIR ?= portal
 
 PARTITION ?=
 OCCUPY_NUM ?=
-
 JOB_ID ?=
-
 DEST ?=
 
 .PHONY: help terraform-container ssh-to sync-to \
+		portal-up portal-down \
 		slurm-up slurm-down \
 		openstack-up openstack-down openstack-deploy \
 		kolla-image kolla-up kolla-shell kolla-down \
@@ -36,7 +35,13 @@ DEST ?=
 		singularity-sbatch-expand singularity-sbatch-shrink
 
 help: ## Show available targets
-	@awk 'BEGIN {FS = ":.*## "; printf "Usage: make <target>\n\nTargets:\n"} /^[a-zA-Z0-9_.-]+:.*## / {printf "  %-32s %s\n", $$1, $$2; if ($$1 == "sync-from" || $$1 == "kolla-shell" || $$1 == "help" || $$1 == "sync-to" || $$1 == "openstack-deploy") printf "\n"}' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*## "; printf "Usage: make <target>\n\nTargets:\n"} /^[a-zA-Z0-9_.-]+:.*## / {printf "  %-32s %s\n", $$1, $$2; if ($$1 == "sync-from" || $$1 == "kolla-shell" || $$1 == "terraform-container" || $$1 == "sync-to" || $$1 == "openstack-deploy") printf "\n"}' $(MAKEFILE_LIST)
+
+portal-up: ## Start the control plane (docker compose up)
+	docker compose -f $(PORTAL_DIR)/docker-compose.yaml up -d --build
+
+portal-down: ## Stop the control plane (docker compose down)
+	docker compose -f $(PORTAL_DIR)/docker-compose.yaml down -v
 
 terraform-container: ## Open a container with Terraform dependencies
 	@set -e; \

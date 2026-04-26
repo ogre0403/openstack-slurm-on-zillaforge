@@ -17,3 +17,11 @@ kolla-ansible/**/99-vars
 
 kolla-ansible/**/admin-openrc.sh
 kolla-ansible/**/clouds.yaml
+.spectra/
+openspec/.vector-search.db*
+
+.env
+clouds.yaml
+__pycache__
+.pytest_cache
+*.pyc

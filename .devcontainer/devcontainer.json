@@ -31,5 +31,8 @@
 		"ghcr.io/cirolosapio/devcontainers-features/alpine-node:0": {
 			"globalPackages": "@fission-ai/openspec@latest"
 		},
-	}
+	},
+	"mounts": [
+	    "source=${localEnv:HOME}/.ssh/id_rsa,target=/root/.ssh/id_rsa,type=bind,readonly"
+	],
 }

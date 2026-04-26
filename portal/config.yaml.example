@@ -1,0 +1,21 @@
+# Control Plane Configuration
+# Copy to config.yaml and adjust values for your environment.
+
+slurm:
+  headnode_host: "192.168.95.X"       # Slurm headnode IP or hostname
+  headnode_user: "cloud-user"          # SSH user for headnode
+  ssh_key_path: "/app/ssh_key"         # Path to SSH private key inside container
+
+openstack:
+  cloud: "kolla-admin"                 # OS_CLOUD profile name
+  client_config: "/etc/openstack/clouds.yaml"
+
+project:
+  project_dir: "/home/cloud-user/resource_manage"  # Project root on headnode
+  rocky_ver: "9"                        # Rocky Linux version (8 or 9)
+  sif_image: "kolla-ansible-rocky9.sif" # Singularity image filename
+
+data:
+  dir: "/data"                          # Persistent storage inside container
+  log_dir: "/data/logs"                 # Execution logs
+  executions_dir: "/data/executions"    # Execution metadata store
