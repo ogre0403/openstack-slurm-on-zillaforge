@@ -24,3 +24,8 @@ output "enable_private_registry" {
   description = "Whether the private Docker registry is enabled on the bastion"
   value       = var.enable_private_registry
 }
+
+output "rocky_ver" {
+  description = "Rocky Linux major version derived from image_tag (used as ROCKY_VER)"
+  value       = var.image_tag
+}

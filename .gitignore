@@ -4,6 +4,8 @@ terraform.tfvars
 terraform.tfstate
 terraform.tfstate.backup
 .terraform.tfstate.lock.info
+*.tfvars
+terraform.tfstate.d/
 
 # ignore configuration generated from Terraform template
 kolla-ansible/**/nfs_shares

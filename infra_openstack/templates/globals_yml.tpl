@@ -10,7 +10,7 @@ workaround_ansible_issue_8743: yes
 # Kolla options
 ################
 kolla_base_distro: "rocky"
-openstack_release: "2024.2"
+openstack_release: "${image_tag == "8" ? "yoga" : "2024.2"}"
 
 # Container engine
 kolla_container_engine: "docker"
@@ -34,8 +34,11 @@ network_interface: "${network_interface_name}"
 # Falls back to network_interface when no optional network is configured
 tunnel_interface: "${tunnel_interface_name != "" ? tunnel_interface_name : network_interface_name}"
 
-# No external/provider network needed for this test deployment
-# neutron_external_interface: ""
+# No external/provider network needed for this test deployment.
+# We use a dummy interface for the neutron external interface.
+# Note: Yoga required an existing interface, but 2024.2 can use non-existent ones.
+# We specify it explicitly and create it in cloud-init for compatibility. 
+neutron_external_interface: "dummy0"
 
 ###################
 # VIP / HAProxy - DISABLED

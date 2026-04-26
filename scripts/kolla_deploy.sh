@@ -11,6 +11,7 @@ INPROGRESS_FILE="$PROJECT_DIR/.kolla_deploy.inprogress"
 DONE_FILE="$PROJECT_DIR/.kolla_deploy.done"
 # Whether to use the bastion's private Docker registry (set by make openstack-deploy)
 ENABLE_PRIVATE_REGISTRY="${ENABLE_PRIVATE_REGISTRY:-false}"
+ROCKY_VER="${ROCKY_VER:-9}"
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG"
@@ -33,7 +34,7 @@ echo "Started at $(date '+%Y-%m-%d %H:%M:%S')" > "$INPROGRESS_FILE"
 log "Created in-progress flag: $INPROGRESS_FILE"
 
 log "--- Step 1/7: kolla-up (docker compose) ---"
-make kolla-up 2>&1 | tee -a "$LOG"
+make kolla-up ROCKY_VER="$ROCKY_VER" 2>&1 | tee -a "$LOG"
 
 log "--- Step 2/7: waiting for kolla_ansible container to be ready ---"
 for i in $(seq 1 30); do
@@ -64,13 +65,26 @@ done
 
 # ---- Private registry: pull images from public registry then push to bastion ----
 if [ "$ENABLE_PRIVATE_REGISTRY" = "true" ]; then
-    # LOCAL_IP=$(hostname -I | cut -d ' ' -f 1)
-    # REGISTRY_ADDR="${LOCAL_IP}:5000"
     log "--- Step 2a/7: private registry enabled — kolla-ansible pull (public registry) ---"
-    make kolla-pull 2>&1 | tee -a "$LOG"
+
+    _pull_retries=3
+    _pull_delay=30
+    for _attempt in $(seq 1 "$_pull_retries"); do
+        log "kolla-pull attempt $_attempt/$_pull_retries..."
+        if make kolla-pull ROCKY_VER="$ROCKY_VER" 2>&1 | tee -a "$LOG"; then
+            log "kolla-pull succeeded on attempt $_attempt."
+            break
+        fi
+        if [ "$_attempt" -eq "$_pull_retries" ]; then
+            log "ERROR: kolla-pull failed after $_pull_retries attempts."
+            exit 1
+        fi
+        log "kolla-pull failed. Retrying in ${_pull_delay}s..."
+        sleep "$_pull_delay"
+    done
 
     log "--- Step 2b/7: private registry enabled — pushing images ---"
-    make kolla-push 2>&1 | tee -a "$LOG"
+    make kolla-push ROCKY_VER="$ROCKY_VER" 2>&1 | tee -a "$LOG"
     log "Images pushed to private registry. Subsequent deploy steps will use it."
 fi
 # ---------------------------------------------------------------------------------

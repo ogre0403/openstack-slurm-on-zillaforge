@@ -40,8 +40,8 @@ RUN     pip install dbus-python \
 
 
 # 建立預設帳號
-RUN     groupadd -g 999000999 kolla \
-    &&  useradd -u 666000666 -g 999000999 -m -s /bin/bash kolla
+RUN     groupadd -g 999009 kolla \
+    &&  useradd -u 666006 -g 999009 -m -s /bin/bash kolla
 
 
 ENV ANSIBLE_COLLECTIONS_PATH=/usr/share/ansible/collections

@@ -15,6 +15,7 @@ KOLLA_REGISTRY="quay.io/openstack.kolla"
 
 ADDITIONAL_IMAGES=(
     "kolla-toolbox"
+    "rocky-source-kolla-toolbox"
 )
 
 echo "=== Detecting tag from existing kolla images ==="
@@ -32,11 +33,13 @@ echo "Detected kolla tag: ${KOLLA_TAG}"
 echo ""
 
 FAILED=0
+SUCCESS=0
 for NAME in "${ADDITIONAL_IMAGES[@]}"; do
     IMAGE="${KOLLA_REGISTRY}/${NAME}:${KOLLA_TAG}"
     echo "Pulling ${IMAGE} ..."
     if docker pull "${IMAGE}"; then
         echo "  OK: ${IMAGE}"
+        SUCCESS=$((SUCCESS + 1))
     else
         echo "  ERROR: failed to pull ${IMAGE}"
         FAILED=$((FAILED + 1))
@@ -46,6 +49,10 @@ done
 
 if [ "$FAILED" -gt 0 ]; then
     echo "WARNING: $FAILED image(s) failed to pull."
+fi
+
+if [ "$SUCCESS" -eq 0 ]; then
+    echo "ERROR: No images pulled successfully."
     exit 1
 fi
 

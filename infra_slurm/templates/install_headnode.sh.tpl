@@ -15,6 +15,15 @@ echo "========== 開始安裝 Head Node ($CONTROLLER_HOSTNAME) =========="
 # Set hostname
 hostnamectl set-hostname "$CONTROLLER_HOSTNAME"
 
+# Create dummy0 interface for neutron_external_interface
+modprobe dummy
+ip link add dummy0 type dummy
+ip link set dummy0 up
+
+# Persist dummy module and interface across reboots
+echo "dummy" > /etc/modules-load.d/dummy.conf
+nmcli connection add type dummy ifname dummy0 con-name dummy0 autoconnect yes
+
 # Resolve own IP (first NIC = default network)
 CONTROLLER_IP=$(hostname -I | awk '{print $1}')
 echo "$CONTROLLER_IP $CONTROLLER_HOSTNAME" >> /etc/hosts
@@ -22,7 +31,13 @@ echo "$CONTROLLER_IP $CONTROLLER_HOSTNAME" >> /etc/hosts
 # ---------- packages ----------
 echo "=> 安裝基礎套件"
 dnf install -y epel-release
-dnf config-manager --set-enabled crb
+# Rocky 8 uses 'powertools'; Rocky 9 uses 'crb'
+OS_VER=$(rpm -E '%%{rhel}')
+if [ "$OS_VER" = "8" ]; then
+    dnf config-manager --set-enabled powertools
+else
+    dnf config-manager --set-enabled crb
+fi
 dnf install -y munge munge-libs munge-devel \
                slurm slurm-slurmd slurm-slurmctld slurm-slurmdbd slurm-pam_slurm \
                nfs-utils mariadb-server apptainer make tmux
@@ -117,6 +132,7 @@ SlurmdTimeout=300
 Waittime=0
 SchedulerType=sched/backfill
 SelectType=select/cons_tres
+SelectTypeParameters=CR_Core
 AccountingStorageType=accounting_storage/slurmdbd
 AccountingStorageHost=$CONTROLLER_HOSTNAME
 JobCompType=jobcomp/none
@@ -136,7 +152,7 @@ PartitionName=all Nodes=${join(",", compute_nodes)} MaxTime=INFINITE State=UP
 PartitionName=odd Nodes=${join(",", compute_nodes_odd)} Default=YES MaxTime=INFINITE State=UP
 %{ endif ~}
 %{ if length(compute_nodes_even) > 0 ~}
-PartitionName=even Nodes=${join(",", compute_nodes_even)} MaxTime=INFINITE State=UP
+PartitionName=even Nodes=${join(",", compute_nodes_even)} MaxTime=INFINITE State=UP%{ if length(compute_nodes_odd) == 0 } Default=YES%{ endif }
 %{ endif ~}
 SLURMCONF
 

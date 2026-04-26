@@ -1,0 +1,63 @@
+Bootstrap: docker
+From: rockylinux/rockylinux:8
+
+%files
+
+%post
+dnf makecache \
+&&  dnf -y update \
+&&  dnf -y install \
+    git \
+    python3-devel \
+    libffi-devel \
+    gcc \
+    openssl-devel \
+    python3-libselinux \
+    sshpass \
+    yum-utils \
+    which \
+&&  dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo \
+&&  dnf -y install docker-ce-cli
+
+dnf -y install \
+    python39 \
+    python39-devel \
+    dbus-devel \
+    glib2-devel
+
+dnf -y install \
+    sudo \
+    iproute \
+&&  dnf clean all \
+&&  rm -rf /var/cache/dnf  \
+&&  echo 'kolla ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers.d/kolla  \
+&&  chmod 0440 /etc/sudoers.d/kolla
+
+groupadd -g 999009 kolla \
+&&  useradd  -u 666006 -g 999009 -m -s /bin/bash kolla
+
+curl -sS https://bootstrap.pypa.io/get-pip.py | /usr/bin/python3.9
+
+pip install dbus-python \
+&&  pip install docker \
+&&  pip install 'ansible-core>=2.11,<2.12.99' \
+&&  pip install git+https://opendev.org/openstack/kolla-ansible@yoga-eom \
+&&  pip install git+https://opendev.org/openstack/osc-placement@yoga-eom \
+&&  pip install git+https://opendev.org/openstack/python-openstackclient@yoga-eom
+
+export ANSIBLE_COLLECTIONS_PATH=/usr/share/ansible/collections
+sed -i 's|version: stable/yoga|version: yoga-eom|' /usr/local/share/kolla-ansible/requirements.yml \
+&&  kolla-ansible install-deps   \
+&& ansible-galaxy collection install community.general:==4.8.0 ansible.posix:==1.4.0
+
+%files
+kolla-ansible/entrypoint.sh /usr/local/bin/entrypoint.sh
+
+%post
+chmod +x /usr/local/bin/entrypoint.sh
+
+%environment
+export ANSIBLE_COLLECTIONS_PATH=/usr/share/ansible/collections
+
+%runscript
+exec /bin/bash -c "$@"

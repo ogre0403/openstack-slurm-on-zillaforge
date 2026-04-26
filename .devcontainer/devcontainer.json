@@ -28,5 +28,8 @@
 	"features": {
 		"ghcr.io/cirolosapio/devcontainers-features/alpine-git:0": {},
 		"ghcr.io/cirolosapio/devcontainers-features/alpine-docker-outside-of-docker:0": {},
+		"ghcr.io/cirolosapio/devcontainers-features/alpine-node:0": {
+			"globalPackages": "@fission-ai/openspec@latest"
+		},
 	}
 }

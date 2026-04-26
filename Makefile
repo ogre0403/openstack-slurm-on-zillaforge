@@ -1,15 +1,15 @@
 .DEFAULT_GOAL := help
 
 TF_IMAGE ?= Zillaforge/terraform
-KA_VER_TAG ?= py311-ka2024.2
 
 TERRAFORM ?= terraform
 SLURM_DIR ?= infra_slurm
 OPENSTACK_DIR ?= infra_openstack
-KOLLA_DOCKERFILE ?= kolla-ansible/Dockerfile
-KOLLA_SINGULARITYFILE ?= kolla-ansible/Singularity.def
+ROCKY_VER ?= 9
+KOLLA_DOCKERFILE ?= kolla-ansible/Dockerfile.rocky$(ROCKY_VER)
+KOLLA_SINGULARITYFILE ?= kolla-ansible/Singularity.def.rocky$(ROCKY_VER)
 KOLLA_COMPOSE_FILE ?= kolla-ansible/docker-compose.yaml
-SIF_FILE ?= kolla-ansible.sif
+SIF_FILE ?= kolla-ansible-rocky$(ROCKY_VER).sif
 KOLLA_PULL_INVENTORY ?= kolla-ansible/etc/kolla/inventroy/pull-all
 KOLLA_PUSH_SCRIPT ?= scripts/kolla-push.sh
 LOCAL_IP ?= $(shell hostname -I | cut -d ' ' -f 1)
@@ -79,6 +79,7 @@ openstack-down: ## Initialize and destroy the OpenStack stack
 openstack-deploy: ## Run full kolla-ansible deployment in the background
 	@ip=$$($(TERRAFORM) -chdir=$(OPENSTACK_DIR) output -raw bastion_floating_ip); \
 	private_registry=$$($(TERRAFORM) -chdir=$(OPENSTACK_DIR) output -raw enable_private_registry 2>/dev/null || echo "false"); \
+	rocky_ver=$$($(TERRAFORM) -chdir=$(OPENSTACK_DIR) output -raw rocky_ver 2>/dev/null || echo "$(ROCKY_VER)"); \
 	if ssh -o StrictHostKeyChecking=no cloud-user@$$ip '[ -f ~/resource_manage/.kolla_deploy.done ]'; then \
 		echo "OpenStack deployment already completed on $$ip (.kolla_deploy.done exists)."; \
 		echo "If you need to re-run, remove the flag file on the bastion and run this target again."; \
@@ -92,7 +93,7 @@ openstack-deploy: ## Run full kolla-ansible deployment in the background
 	fi; \
 	echo "Launching background kolla-ansible deployment on $$ip (enable_private_registry=$$private_registry) ..."; \
 	ssh -o StrictHostKeyChecking=no cloud-user@$$ip \
-		"ENABLE_PRIVATE_REGISTRY=$$private_registry nohup bash ~/resource_manage/scripts/kolla_deploy.sh > /dev/null 2>&1 &"; \
+		"ENABLE_PRIVATE_REGISTRY=$$private_registry ROCKY_VER=$$rocky_ver nohup bash ~/resource_manage/scripts/kolla_deploy.sh > /dev/null 2>&1 &"; \
 	echo ""; \
 	echo "Deployment is running in the background on $$ip."; \
 	echo "Monitor progress with:"; \
@@ -125,7 +126,7 @@ sync-to: ## Sync local project (excluding .git) to remote resource_manage/ (DEST
 	rsync -avzu --exclude '.git' -e "ssh -o StrictHostKeyChecking=no" $(MAKEFILE_DIR) cloud-user@$$ip:resource_manage/
 
 kolla-up: ## Start the Kolla-Ansible containers
-	docker compose -f $(KOLLA_COMPOSE_FILE) up -d
+	ROCKY_VER=$(ROCKY_VER) docker compose -f $(KOLLA_COMPOSE_FILE) up -d
 
 kolla-down: ## Stop the Kolla-Ansible containers
 	docker compose -f $(KOLLA_COMPOSE_FILE) down
@@ -139,7 +140,7 @@ kolla-push: ## Re-tag and push all kolla images to the private registry
 		bash -c 'bash /scripts/kolla-push.sh $(REGISTRY_ADDR) && sed -i "/^#docker_/s/^#//" /etc/kolla/globals.yml'
 
 kolla-image: ## Build the Kolla-Ansible image
-	docker build -t kolla-ansible:$(KA_VER_TAG) -f $(KOLLA_DOCKERFILE) .
+	docker build -t kolla-ansible:rocky$(ROCKY_VER) -f $(KOLLA_DOCKERFILE) .
 
 kolla-shell: ## Open a shell inside the Kolla-Ansible container
 	docker exec -u kolla -w /home/kolla -e HOME=/home/kolla -it kolla_ansible bash
@@ -165,7 +166,7 @@ singularity-srun-expand: ## srun expand compute nodes
 		echo "ERROR: OCCUPY_NUM must be set (for example: make OCCUPY_NUM=<NUM_NODES> singularity-srun-expand)"; \
 		exit 1; \
 	fi
-	srun -J expand -p $(PARTITION) -N $(OCCUPY_NUM) bash $(MAKEFILE_DIR)job_scripts/submit.sh add
+	ROCKY_VER=$(ROCKY_VER) srun -J expand -p $(PARTITION) -N $(OCCUPY_NUM) bash $(MAKEFILE_DIR)job_scripts/submit.sh add
 
 singularity-srun-shrink: ## srun shrink compute nodes
 	@if [ -z "$(strip $(PARTITION))" ]; then \
@@ -176,7 +177,7 @@ singularity-srun-shrink: ## srun shrink compute nodes
 		echo "ERROR: JOB_ID must be set (for example: make JOB_ID=<JOB_ID> singularity-sbatch-shrink)"; \
 		exit 1; \
 	fi	
-	srun -J shrink -p $(PARTITION) -N 1 bash $(MAKEFILE_DIR)job_scripts/submit.sh del $(JOB_ID)
+	ROCKY_VER=$(ROCKY_VER) srun -J shrink -p $(PARTITION) -N 1 bash $(MAKEFILE_DIR)job_scripts/submit.sh del $(JOB_ID)
 
 singularity-sbatch-expand: ## Run batch Job to expand compute nodes
 	@if [ -z "$(strip $(PARTITION))" ]; then \
@@ -188,7 +189,7 @@ singularity-sbatch-expand: ## Run batch Job to expand compute nodes
 		exit 1; \
 	fi
 	sbatch -J expand -p $(PARTITION) -N $(OCCUPY_NUM) \
-		--export=ALL,PROJECT_DIR=$(MAKEFILE_DIR),PAYLOAD_DIR=$(MAKEFILE_DIR)job_scripts \
+		--export=ALL,PROJECT_DIR=$(MAKEFILE_DIR),PAYLOAD_DIR=$(MAKEFILE_DIR)job_scripts,ROCKY_VER=$(ROCKY_VER) \
 		$(MAKEFILE_DIR)job_scripts/submit.sh add
 
 singularity-sbatch-shrink: ## Run batch Job to shrink compute nodes from previous expand job
@@ -201,5 +202,5 @@ singularity-sbatch-shrink: ## Run batch Job to shrink compute nodes from previou
 		exit 1; \
 	fi	
 	sbatch -J shrink -p $(PARTITION) -N 1 \
-		--export=ALL,PROJECT_DIR=$(MAKEFILE_DIR),PAYLOAD_DIR=$(MAKEFILE_DIR)job_scripts \
+		--export=ALL,PROJECT_DIR=$(MAKEFILE_DIR),PAYLOAD_DIR=$(MAKEFILE_DIR)job_scripts,ROCKY_VER=$(ROCKY_VER) \
 		$(MAKEFILE_DIR)job_scripts/submit.sh del $(JOB_ID)

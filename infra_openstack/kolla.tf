@@ -18,6 +18,7 @@ resource "local_file" "globals_yml" {
     tunnel_interface_name     = data.external.nic_names.result.tunnel_interface
     bastion_ip                = zillaforge_server.bastion.network_attachment[0].ip_address
     enable_private_registry   = var.enable_private_registry
+    image_tag                 = var.image_tag
   })
   filename = "${path.module}/../kolla-ansible/etc/kolla/globals.yml"
 }

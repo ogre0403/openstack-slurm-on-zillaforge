@@ -128,6 +128,15 @@ resource "zillaforge_server" "nodes" {
   user_data = <<-USERDATA
 #!/bin/bash
 hostnamectl set-hostname "${count.index == 0 ? format("%s-01-control-tf", var.node_name_prefix) : format("%s-%02d-compute-tf", var.node_name_prefix, count.index + 1)}"
+
+# Create dummy0 interface for neutron_external_interface
+modprobe dummy
+ip link add dummy0 type dummy
+ip link set dummy0 up
+
+# Persist dummy module and interface across reboots
+echo "dummy" > /etc/modules-load.d/dummy.conf
+nmcli connection add type dummy ifname dummy0 con-name dummy0 autoconnect yes
 USERDATA
 
   network_attachment {
