@@ -8,8 +8,50 @@
   become: true
 
   tasks:
+    - name: DRAIN node in Slurm
+    # 註解: 獲取具管理員權限的使用者，並將該節點在 Slurm 叢集中的狀態標記為 DRAIN，以確保它在被 OpenStack 徵用期間，不會再被排程器派發新的 HPC 運算任務。
+      ansible.builtin.shell: |
+        THIS_NODE="$(hostname -s)"
+        SLURM_ADMIN="$(sacctmgr show user withassoc format=user,adminlevel -n -P | grep -i 'Administ' | cut -d'|' -f1 | head -n 1)"
+
+        if [ -z "$SLURM_ADMIN" ]; then
+          echo "Error: Cannot find Slurm Administrator account."
+          exit 1
+        fi
+        
+        #echo "RUN: sudo su - \"$SLURM_ADMIN\" -c \"scontrol update NodeName=${THIS_NODE} State=DRAIN Reason='Occupied by OpenStack Deployment'\""
+        sudo su - "$SLURM_ADMIN" -c "scontrol update NodeName=${THIS_NODE} State=DRAIN Reason='Occupied by OpenStack Deployment'"
+      args:
+        executable: /bin/bash
+
     - name: Stop and disable slurmd
       ansible.builtin.systemd:
         name: slurmd
         state: stopped
         enabled: false
+
+- name: Stop NFS client related services
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Unmount all active NFS file systems gracefully (prevent hang)
+      ansible.builtin.shell: umount -a -t nfs,nfs4 -l || true
+      args:
+        executable: /bin/bash
+      when: false
+
+    - name: Stop and disable NFS client related services
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        state: stopped
+        enabled: false
+      loop:
+        - rpcbind.socket
+        - rpcbind.service
+        - nfs-client.target
+        - nfs-common.service
+        - nfs-utils.service
+        - autofs.service
+      ignore_errors: true
+      when: false
