@@ -29,6 +29,7 @@ resource "zillaforge_server" "headnode" {
     compute_nodes_odd   = local.compute_odd_hostnames
     compute_nodes_even  = local.compute_even_hostnames
     test_user_password  = var.server_password
+    sudoers_content     = file("${path.module}/templates/sudoers.tpl")
   })
 
   network_attachment {
@@ -67,6 +68,7 @@ resource "zillaforge_server" "compute" {
     controller_ip       = zillaforge_server.headnode.network_attachment[0].ip_address
     nfs_share_dir       = local.nfs_share_dir
     test_user_password  = var.server_password
+    sudoers_content     = file("${path.module}/templates/sudoers.tpl")
   })
 
   network_attachment {
@@ -127,12 +129,12 @@ resource "null_resource" "test_slurm" {
       USER="${local.cloud_user}"
 
       echo "=== Slurm Cluster Status ==="
-      sshpass -p "$PASS" ssh -o StrictHostKeyChecking=no "$USER@$FIP" \
+      sshpass -p "$PASS" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$USER@$FIP" \
         "echo '$PASS' | sudo -S sinfo" || true
 
       echo ""
       echo "=== Submitting Test Job ==="
-      sshpass -p "$PASS" ssh -o StrictHostKeyChecking=no "$USER@$FIP" \
+      sshpass -p "$PASS" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$USER@$FIP" \
         "srun --nodes=1 --ntasks=1 hostname" || true
 
       echo ""

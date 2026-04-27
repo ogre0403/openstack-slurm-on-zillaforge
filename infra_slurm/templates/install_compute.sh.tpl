@@ -55,6 +55,14 @@ getent group test-user >/dev/null || groupadd -g 1100 test-user
 id test-user &>/dev/null     || useradd -M -u 1100 -g 1100 -s /bin/bash test-user
 echo "test-user:${test_user_password}" | chpasswd
 
+
+# ---------- sudoers ----------
+echo "=> 設定 sudoers 權限"
+cat > /etc/sudoers.d/cloud-user <<SUDOERS
+${sudoers_content}
+SUDOERS
+chmod 0440 /etc/sudoers.d/cloud-user
+
 # ---------- NFS Client ----------
 echo "=> 設定 NFS Client 並掛載 $NFS_SHARE_DIR"
 if ! grep -q "$CONTROLLER_IP:$NFS_SHARE_DIR" /etc/fstab; then
