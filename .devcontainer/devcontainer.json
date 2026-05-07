@@ -2,7 +2,9 @@
 // https://github.com/microsoft/vscode-dev-containers/tree/v0.205.2/containers/alpine
 {
 	"name": "terraform",
-	"image": "Zillaforge/terraform:0.0.1-alpha",
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
 	"customizations": {
 		"vscode": {
 			"extensions": [
@@ -13,30 +15,54 @@
 				"bierner.markdown-mermaid"
 			],
 			"settings": {
-				"terminal.integrated.defaultProfile.linux": "bash",
+				"terminal.integrated.defaultProfile.linux": "zsh",
 				"terminal.integrated.profiles.linux": {
-					"bash": {
-						"path": "/usr/local/bin/bash"
+					"zsh": {
+						"path": "/bin/zsh"
+					},
+					"tmux-ai": {
+						"path": "/bin/zsh",
+						"args": [
+							"-lc",
+							"exec ${containerWorkspaceFolder}/.devcontainer/start-ai-workbench.sh"
+						]
 					}
 				},
 			}
 		}
 	},
 	"containerEnv": {
+		"WORKSPACE_FOLDER": "${containerWorkspaceFolder}",
 		"TFENV_AUTO_INSTALL": "false",
+		"PAGER": "less -FRX",
+		"GIT_PAGER": "less -FRX",
+		"LESS": "FRX",
 		"CLAUDE_CODE_USE_BEDROCK": "1",
 		"CLAUDE_CODE_MAX_OUTPUT_TOKENS": "64000",
-		"AWS_BEARER_TOKEN_BEDROCK": "${localEnv:AWS_BEARER_TOKEN_BEDROCK}"
+		"AWS_BEARER_TOKEN_BEDROCK": "${localEnv:AWS_BEARER_TOKEN_BEDROCK}",
+		"AZURE_COGNITIVE_SERVICES_RESOURCE_NAME": "${localEnv:AZURE_COGNITIVE_SERVICES_RESOURCE_NAME}",
+		"GEMINI_API_KEY": "${localEnv:GEMINI_API_KEY}",
+		"AZURE_OPENAI_API_KEY": "${localEnv:AZURE_OPENAI_API_KEY}",
 	},
 	"features": {
 		"ghcr.io/cirolosapio/devcontainers-features/alpine-git:0": {},
+		"ghcr.io/cirolosapio/devcontainers-features/alpine-openssh:0": {},
+		"ghcr.io/cirolosapio/devcontainers-features/alpine-make:0": {},
 		"ghcr.io/cirolosapio/devcontainers-features/alpine-docker-outside-of-docker:0": {},
 		"ghcr.io/cirolosapio/devcontainers-features/alpine-node:0": {
-			"globalPackages": "@fission-ai/openspec@latest"
+			"globalPackages": "@fission-ai/openspec@latest @openai/codex @google/gemini-cli"
 		},
-		"ghcr.io/anthropics/devcontainer-features/claude-code:1": {}
+		"ghcr.io/anthropics/devcontainer-features/claude-code:1": {},
+		"ghcr.io/stu-bell/devcontainer-features/open-code:0": {},
 	},
 	"mounts": [
-	    "source=${localEnv:HOME}/.ssh/id_rsa,target=/root/.ssh/id_rsa,type=bind,readonly"
+	    "source=${localEnv:HOME}/.ssh/id_rsa,target=/root/.ssh/id_rsa,type=bind,readonly",
+		"source=opencode_setting,target=/root/.local,type=volume",
+		"source=claude_setting,target=/root/.claude_setting,type=volume",
+		"source=gemini_setting,target=/root/.gemini,type=volume",
+		"source=codex_setting,target=/root/.codex,type=volume",
 	],
+	"postStartCommand":  "sh .devcontainer/postStartCommand.sh",
+	"postCreateCommand": "sh .devcontainer/postCreateCommand.sh",
+	"initializeCommand": "sh .devcontainer/initializeCommand.sh",
 }
