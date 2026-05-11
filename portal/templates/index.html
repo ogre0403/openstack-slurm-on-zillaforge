@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elastic Cloud Control</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>⚙ Elastic Cloud Control</h1>
+            <nav>
+                <button class="tab active" data-panel="inventory" onclick="switchPanel('inventory')">Inventory &amp; Operations</button>
+                <button class="tab" data-panel="history" onclick="switchPanel('history')">History &amp; Logs</button>
+            </nav>
+            <div id="connection-status" class="status-indicator disconnected">●</div>
+            <button id="theme-toggle" class="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light mode">🌙</button>
+        </header>
+
+        <main>
+            <!-- Node Inventory Panel -->
+            <section id="inventory" class="panel active">
+                <div class="workspace-grid">
+                    <div class="inventory-pane">
+                        <div class="panel-header">
+                            <h2>Node Inventory</h2>
+                            <button class="btn btn-secondary" onclick="refreshInventory()">↻ Refresh</button>
+                        </div>
+                        <div class="legend">
+                            <span class="legend-item"><span class="dot role-slurm_worker"></span> Slurm Worker</span>
+                            <span class="legend-item"><span class="dot role-openstack_compute"></span> OpenStack Compute</span>
+                            <span class="legend-item"><span class="dot role-transition"></span> Transition</span>
+                            <span class="legend-item"><span class="dot role-conflict"></span> Conflict</span>
+                            <span class="legend-item"><span class="dot role-unknown"></span> Unknown</span>
+                        </div>
+                        <div id="inventory-loading" class="loading">Loading inventory...</div>
+                        <div id="inventory-error" class="error-msg hidden"></div>
+                        <table id="inventory-table" class="data-table hidden">
+                            <thead>
+                                <tr>
+                                    <th><input type="checkbox" id="select-all" onchange="toggleSelectAll(this)"></th>
+                                    <th data-sort="node_name" onclick="sortInventory('node_name')">Node<span class="sort-indicator"> ⇅</span></th>
+                                    <th data-sort="role" onclick="sortInventory('role')">Role<span class="sort-indicator"> ⇅</span></th>
+                                    <th data-sort="slurm_state" onclick="sortInventory('slurm_state')">Slurm State<span class="sort-indicator"> ⇅</span></th>
+                                    <th data-sort="slurm_partitions" onclick="sortInventory('slurm_partitions')">Partitions<span class="sort-indicator"> ⇅</span></th>
+                                    <th data-sort="cpus" onclick="sortInventory('cpus')">CPUs (alloc/total)<span class="sort-indicator"> ⇅</span></th>
+                                    <th data-sort="openstack" onclick="sortInventory('openstack')">OpenStack<span class="sort-indicator"> ⇅</span></th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventory-body"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="operations-pane">
+                        <div class="panel-header operations-header">
+                            <h2>Operations</h2>
+                        </div>
+
+                        <div class="ops-stack">
+                            <div class="ops-card" id="expand-card">
+                                <div class="ops-card-header">
+                                    <h3>↗ Expand</h3>
+                                </div>
+                                <div class="ops-card-body">
+                                <p class="ops-desc">Add OpenStack compute capacity by allocating Slurm nodes.</p>
+                                <div class="form-group">
+                                    <label>Execution Mode</label>
+                                    <div class="mode-toggle">
+                                        <button class="mode-btn active" data-mode="batch" onclick="setExpandMode('batch')">Batch (sbatch)</button>
+                                        <button class="mode-btn" data-mode="direct" onclick="setExpandMode('direct')">Direct</button>
+                                    </div>
+                                </div>
+                                <div id="expand-direct-warning" class="warning hidden">
+                                    ⚠ <strong>Direct mode</strong> bypasses Slurm scheduling. Use only when partition capacity is unavailable. The operation runs directly on the headnode.
+                                </div>
+                                <div id="expand-batch-fields">
+                                    <div class="form-group">
+                                        <label for="expand-partition">Partition</label>
+                                        <input type="text" id="expand-partition" value="all" placeholder="all">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="expand-num">Number of Nodes</label>
+                                        <input type="number" id="expand-num" value="1" min="1">
+                                    </div>
+                                </div>
+                                <div id="expand-direct-fields" class="form-group hidden">
+                                    <label>Selected Nodes</label>
+                                    <div id="expand-selected-nodes" class="selected-nodes-display">
+                                        <em>Select nodes from the inventory on the left</em>
+                                    </div>
+                                </div>
+                                <button class="btn btn-primary" onclick="submitExpand()">Execute Expand</button>
+                                </div>
+                            </div>
+
+                            <div class="ops-card" id="shrink-card">
+                                <div class="ops-card-header">
+                                    <h3>↙ Shrink</h3>
+                                </div>
+                                <div class="ops-card-body">
+                                <p class="ops-desc">Remove OpenStack compute nodes and return them to Slurm.</p>
+                                <div class="form-group">
+                                    <label>Execution Mode</label>
+                                    <div class="mode-toggle">
+                                        <button class="mode-btn active" data-mode="batch" onclick="setShrinkMode('batch')">Batch (sbatch)</button>
+                                        <button class="mode-btn" data-mode="direct" onclick="setShrinkMode('direct')">Direct</button>
+                                    </div>
+                                </div>
+                                <div id="shrink-direct-warning" class="warning hidden">
+                                    ⚠ <strong>Direct mode</strong> bypasses Slurm scheduling. Use only when partition capacity is unavailable.
+                                </div>
+                                <div class="form-group">
+                                    <label>Targeting Method</label>
+                                    <div class="mode-toggle">
+                                        <button class="mode-btn active" data-target="job" onclick="setShrinkTarget('job')">By Job ID</button>
+                                        <button class="mode-btn" data-target="nodes" onclick="setShrinkTarget('nodes')">By Node Selection</button>
+                                    </div>
+                                </div>
+                                <div id="shrink-job-group" class="form-group">
+                                    <label for="shrink-job-id">Expand Job ID</label>
+                                    <input type="text" id="shrink-job-id" placeholder="e.g. 12345">
+                                </div>
+                                <div id="shrink-nodes-group" class="form-group hidden">
+                                    <label>Selected Nodes</label>
+                                    <div id="shrink-selected-nodes" class="selected-nodes-display">
+                                        <em>Select nodes from the inventory on the left</em>
+                                    </div>
+                                    <div id="shrink-node-warning" class="warning hidden">
+                                        ⚠ <strong>Caution:</strong> Ensure selected nodes are currently acting as OpenStack computes. Mixed or ambiguous selections will be rejected.
+                                    </div>
+                                </div>
+                                <div id="shrink-partition-group" class="form-group">
+                                    <label for="shrink-partition">Partition</label>
+                                    <input type="text" id="shrink-partition" value="all" placeholder="all">
+                                </div>
+                                <button class="btn btn-danger" onclick="submitShrink()">Execute Shrink</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- History & Logs Panel -->
+            <section id="history" class="panel hidden">
+                <div class="panel-header">
+                    <h2>History &amp; Logs</h2>
+                    <button class="btn btn-secondary" onclick="refreshHistory()">↻ Refresh</button>
+                </div>
+                <div id="history-loading" class="loading hidden">Loading...</div>
+                <div id="history-error" class="error-msg hidden"></div>
+                <table id="history-table" class="data-table">
+                    <thead>
+                        <tr>
+                            <th data-sort="id" onclick="sortHistory('id')">ID<span class="sort-indicator"> ⇅</span></th>
+                            <th data-sort="operation" onclick="sortHistory('operation')">Operation<span class="sort-indicator"> ⇅</span></th>
+                            <th data-sort="mode" onclick="sortHistory('mode')">Mode<span class="sort-indicator"> ⇅</span></th>
+                            <th data-sort="status" onclick="sortHistory('status')">Status<span class="sort-indicator"> ⇅</span></th>
+                            <th data-sort="slurm_job_id" onclick="sortHistory('slurm_job_id')">Slurm Job<span class="sort-indicator"> ⇅</span></th>
+                            <th data-sort="target_nodes" onclick="sortHistory('target_nodes')">Target Nodes<span class="sort-indicator"> ⇅</span></th>
+                            <th data-sort="created_at" onclick="sortHistory('created_at')">Created<span class="sort-indicator"> ⇅</span></th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-body">
+                        <tr><td colspan="8" class="empty-state">No executions yet</td></tr>
+                    </tbody>
+                </table>
+                <div id="history-pagination" class="pagination hidden">
+                    <button id="history-prev" class="btn btn-secondary btn-sm" onclick="changeHistoryPage(-1)">Previous</button>
+                    <span id="history-page-info" class="pagination-info">Page 1 of 1</span>
+                    <button id="history-next" class="btn btn-secondary btn-sm" onclick="changeHistoryPage(1)">Next</button>
+                </div>
+
+                <!-- Log Viewer -->
+                <div id="log-viewer" class="log-viewer hidden">
+                    <div class="log-header">
+                        <h3>Logs: <span id="log-exec-id"></span></h3>
+                        <div>
+                            <label><input type="checkbox" id="log-follow" checked> Follow</label>
+                            <button class="btn btn-secondary btn-sm" onclick="closeLogViewer()">✕ Close</button>
+                        </div>
+                    </div>
+                    <pre id="log-content" class="log-content"></pre>
+                </div>
+            </section>
+        </main>
+
+        <!-- Confirmation Modal -->
+        <div id="confirm-modal" class="modal hidden">
+            <div class="modal-content">
+                <h3 id="confirm-title">Confirm Operation</h3>
+                <div id="confirm-body"></div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button class="btn btn-danger" id="confirm-btn" onclick="confirmAction()">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

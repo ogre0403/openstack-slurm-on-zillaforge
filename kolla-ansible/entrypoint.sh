@@ -5,8 +5,8 @@ if [ "$(id -u)" = '0' ]; then
     # ==========================================
     # 這裡是 Docker 情境 (以 root 啟動)
     # ==========================================
-    TARGET_UID=${PUID:-666000666}
-    TARGET_GID=${PGID:-999000999}
+    TARGET_UID=${PUID:-666006}
+    TARGET_GID=${PGID:-999009}
 
     groupmod -o -g "$TARGET_GID" kolla 2>/dev/null || true
     usermod -o -u "$TARGET_UID" kolla 2>/dev/null || true

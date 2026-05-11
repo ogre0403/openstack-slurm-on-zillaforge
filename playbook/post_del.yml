@@ -7,12 +7,31 @@
   hosts: baremetal
   become: true  
   tasks:
-    - name: Reboot hosts and wait for them to come back online
+    - name: Check if systemd-logind.service is enabled
+      ansible.builtin.command: systemctl is-enabled systemd-logind.service
+      register: logind_status
+      changed_when: false
+      failed_when: false
+
+    - name: Reboot hosts via reboot module (systemd-logind enabled)
       ansible.builtin.reboot:
         msg: "Rebooting to prepare for cleanup tasks"
         pre_reboot_delay: 10
         post_reboot_delay: 30
-        reboot_timeout: 600
+        reboot_timeout: 1800
+      when: logind_status.stdout == "enabled"
+
+    - name: Reboot hosts via shell cmd (systemd-logind disabled)
+      ansible.builtin.shell: sleep 5 && reboot
+      async: 1
+      poll: 0
+      when: logind_status.stdout != "enabled"
+
+    - name: Wait for hosts to come back online (systemd-logind disabled)
+      ansible.builtin.wait_for_connection:
+        delay: 40
+        timeout: 1800
+      when: logind_status.stdout != "enabled"
 
 - name: Post-cleanup - Remove Docker SDK and Docker engine from baremetal hosts
   hosts: baremetal
@@ -39,12 +58,15 @@
         tasks_from: remove_etc_hosts_block
       tags: [remove_etc_hosts_block]
 
-- name: Start and enable slurmd service
+- name: Start and enable munge and slurmd services
   hosts: all
   become: true
   tasks:
-    - name: Start and enable slurmd
+    - name: Restart and enable munge and slurmd
       ansible.builtin.systemd:
-        name: slurmd
-        state: started
+        name: "{{ item }}"
+        state: restarted
         enabled: true
+      loop:
+        - munge
+        - slurmd

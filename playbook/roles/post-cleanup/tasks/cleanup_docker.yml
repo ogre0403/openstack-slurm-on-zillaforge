@@ -13,12 +13,12 @@
   when: running_containers.rc == 0 and running_containers.stdout | length > 0
 
 - name: Remove all containers
-  command: docker rm -f $(docker ps -aq)
+  shell: docker rm -f $(docker ps -aq)
   when: running_containers.rc == 0
   ignore_errors: true
 
 - name: Remove all Docker images
-  command: docker rmi -f $(docker images -q)
+  shell: docker rmi -f $(docker images -q)
   when: running_containers.rc == 0
   ignore_errors: true
 

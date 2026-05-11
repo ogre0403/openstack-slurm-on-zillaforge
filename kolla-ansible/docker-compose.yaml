@@ -3,7 +3,7 @@ services:
     container_name: kolla_ansible
     build:
       context: ..
-      dockerfile: kolla-ansible/Dockerfile
+      dockerfile: kolla-ansible/Dockerfile.rocky${ROCKY_VER:-9}
     environment:
       - ANSIBLE_CONFIG=/etc/kolla/ansible.cfg
       - ANSIBLE_COLLECTIONS_PATH=/usr/share/ansible/collections

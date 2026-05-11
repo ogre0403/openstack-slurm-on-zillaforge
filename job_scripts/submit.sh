@@ -28,10 +28,14 @@ ACTION=$1
 OCCUPY_JOB_ID=$2
 
 if [ "$ACTION" = "add" ]; then
-    NODE_LIST=$(scontrol show hostnames | paste -sd ',')
+    if [ -z "$NODE_LIST" ]; then
+        NODE_LIST=$(scontrol show hostnames | paste -sd ',')
+    fi
     PAYLOAD_SCRIPT="add_computes.sh"
 elif [ "$ACTION" = "del" ]; then
-    NODE_LIST=$(scontrol show hostnames $(sacct -j $OCCUPY_JOB_ID -P -n -X -o NodeList) | paste -sd, -)
+    if [ -z "$NODE_LIST" ]; then
+        NODE_LIST=$(scontrol show hostnames $(sacct -j $OCCUPY_JOB_ID -P -n -X -o NodeList) | paste -sd, -)
+    fi
     PAYLOAD_SCRIPT="del_computes.sh"
 else
     echo "Usage: submit <add|del> [OCCUPY_JOB_ID]"
@@ -39,7 +43,9 @@ else
 fi
 
 # 2. 換成實際包含 openstack-cli 與 kolla-ansible 的映像檔路徑
-IMAGE_PATH="$PROJECT_DIR/kolla-ansible.sif"
+# ROCKY_VER 由 make 透過環境變數傳入，預設為 9
+ROCKY_VER=${ROCKY_VER:-9}
+IMAGE_PATH="$PROJECT_DIR/kolla-ansible-rocky${ROCKY_VER}.sif"
 
 # 3. 設定要掛載進容器的目錄 (Bind Mounts)
 BIND_ARGS="-B $PROJECT_DIR/kolla-ansible/etc/kolla/:/etc/kolla -B $PROJECT_DIR/kolla-ansible/etc/openstack/:/etc/openstack -B $PROJECT_DIR/playbook:/playbook"

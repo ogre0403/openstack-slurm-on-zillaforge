@@ -12,6 +12,6 @@
 - name: Remove Docker SDK pip packages from system Python
   pip:
     name: "{{ docker_sdk_pip_packages }}"
-    executable: "{{ ansible_facts.python.executable | regex_replace('python(\\d+(\\.\\d+)?)$', 'pip\\1') }}"
+    executable: "{{ ansible_facts.python.executable | regex_replace('python(\\d+(\\.\\d+)?)$', 'pip\\1') | regex_replace('/usr/libexec/platform-python$', 'pip3') }}"
     state: absent
   when: virtualenv is none or virtualenv | length == 0

@@ -1,0 +1,63 @@
+FROM rockylinux/rockylinux:8
+
+RUN     dnf makecache \
+    &&  dnf -y update \
+    &&  dnf -y install \
+        git \
+        python3-devel \
+        libffi-devel \
+        gcc \
+        openssl-devel \
+        python3-libselinux \
+        sshpass \
+        yum-utils \
+        which \
+    &&  dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo \
+    &&  dnf -y install docker-ce-cli
+
+RUN     dnf -y install \
+        python39 \
+        python39-devel \
+        dbus-devel \
+        glib2-devel
+
+RUN     dnf -y install \
+        sudo \
+        iproute \
+    &&  dnf clean all \
+    &&  rm -rf /var/cache/dnf  \
+    &&  echo 'kolla ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers.d/kolla  \
+    &&  chmod 0440 /etc/sudoers.d/kolla
+
+RUN curl -sS https://bootstrap.pypa.io/get-pip.py | /usr/bin/python3.9
+
+RUN     pip install dbus-python \
+    &&  pip install docker \
+    &&  pip install 'ansible-core>=2.11,<2.12.99' \
+    &&  pip install git+https://opendev.org/openstack/kolla-ansible@yoga-eom \
+    &&  pip install git+https://opendev.org/openstack/osc-placement@yoga-eom \
+    &&  pip install git+https://opendev.org/openstack/python-openstackclient@yoga-eom
+
+# 建立預設帳號
+RUN     groupadd -g 999009 kolla \
+    &&  useradd  -u 666006 -g 999009 -m -s /bin/bash kolla
+
+ENV ANSIBLE_COLLECTIONS_PATH=/usr/share/ansible/collections
+# The yoga-eom branch of ansible-collection-kolla has been deleted upstream;
+# only the tag "yoga-eom" remains.  Patch requirements.yml so that
+# `ansible-galaxy collection install` checks out the tag instead of the
+# now-missing branch "stable/yoga".
+#
+# ansible.posix and community.general is not included in older ansible-core
+RUN     sed -i 's|version: stable/yoga|version: yoga-eom|' /usr/local/share/kolla-ansible/requirements.yml \
+    &&  kolla-ansible install-deps   \
+    && ansible-galaxy collection install community.general:==4.8.0 ansible.posix:==1.4.0
+
+WORKDIR /home/kolla
+
+COPY kolla-ansible/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+
+CMD ["/bin/bash"]

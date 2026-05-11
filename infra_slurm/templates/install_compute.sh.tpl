@@ -15,6 +15,15 @@ echo "========== 開始安裝 Compute Node ($NODE_HOSTNAME) =========="
 # Set hostname
 hostnamectl set-hostname "$NODE_HOSTNAME"
 
+# Create dummy0 interface for neutron_external_interface
+modprobe dummy
+ip link add dummy0 type dummy
+ip link set dummy0 up
+
+# Persist dummy module and interface across reboots
+echo "dummy" > /etc/modules-load.d/dummy.conf
+nmcli connection add type dummy ifname dummy0 con-name dummy0 autoconnect yes
+
 # Add headnode and self to /etc/hosts
 NODE_IP=$(hostname -I | awk '{print $1}')
 echo "$CONTROLLER_IP $CONTROLLER_HOSTNAME" >> /etc/hosts
@@ -23,7 +32,13 @@ echo "$NODE_IP $NODE_HOSTNAME" >> /etc/hosts
 # ---------- packages ----------
 echo "=> 安裝基礎套件"
 dnf install -y epel-release
-dnf config-manager --set-enabled crb
+# Rocky 8 uses 'powertools'; Rocky 9 uses 'crb'
+OS_VER=$(rpm -E '%%{rhel}')
+if [ "$OS_VER" = "8" ]; then
+    dnf config-manager --set-enabled powertools
+else
+    dnf config-manager --set-enabled crb
+fi
 dnf install -y munge munge-libs munge-devel slurm slurm-slurmd slurm-pam_slurm \
     nfs-utils apptainer checkpolicy policycoreutils-python-utils
 

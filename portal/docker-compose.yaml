@@ -1,0 +1,25 @@
+services:
+  control-plane:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cluster_control_plane
+    ports:
+      - "5050:5000"
+    volumes:
+      - control_plane_data:/data
+      - ${SSH_KEY_PATH:-$HOME/.ssh/id_rsa}:/app/ssh_key:ro
+      - ${OS_CLIENT_CONFIG_FILE:-$PWD/portal/clouds.yaml}:/etc/openstack/clouds.yaml:ro
+    environment:
+      - SLURM_HEADNODE_HOST=${SLURM_HEADNODE_HOST}
+      - SLURM_HEADNODE_USER=${SLURM_HEADNODE_USER:-cloud-user}
+      - SSH_KEY_PATH=/app/ssh_key
+      - OS_CLOUD=${OS_CLOUD:-kolla-admin}
+      - OS_CLIENT_CONFIG_FILE=/etc/openstack/clouds.yaml
+      - PROJECT_DIR=${PROJECT_DIR:-/home/cloud-user/resource_manage}
+      - ROCKY_VER=${ROCKY_VER:-9}
+      - DATA_DIR=/data
+    restart: unless-stopped
+
+volumes:
+  control_plane_data:

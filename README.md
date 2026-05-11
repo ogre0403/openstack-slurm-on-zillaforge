@@ -135,6 +135,49 @@ make PARTITION=<PARTITION> JOB_ID=<JOB_ID> singularity-sbatch-shrink
 ```
 
 
+## Cluster Control Plane (Web UI)
+
+A Docker-deployed web application on the bastion that provides a unified operator interface for cluster management.
+
+### Features
+
+- **Node Inventory**: Live view combining Slurm and OpenStack state with automatic role classification (Slurm worker, OpenStack compute, transition, conflict).
+- **Expand/Shrink Operations**: Both batch mode (default, via `sbatch`) and direct mode (fallback when partition capacity is unavailable).
+- **Execution History & Logs**: Real-time log streaming via SocketIO and completed-log replay.
+
+### Quick Start
+
+```shell
+# On the bastion host
+cd control_plane
+
+# Set required environment variables
+export SLURM_HEADNODE_HOST=192.168.95.X
+export SLURM_HEADNODE_USER=cloud-user
+export SSH_KEY_PATH=~/.ssh/id_rsa
+
+# Build and start
+docker compose up -d --build
+
+# Access at http://<bastion-ip>:5000
+```
+
+### Execution Modes
+
+| Mode | Description | When to Use |
+|------|-------------|-------------|
+| **Batch** (default) | Submits via `sbatch`, tracked by Slurm job ID | Normal operations with available partition capacity |
+| **Direct** (fallback) | Runs directly on headnode via SSH | When Slurm partition is exhausted |
+
+### Log Storage
+
+- **Batch mode**: `<project_dir>/logs/expand-<job_id>.out` on the headnode
+- **Direct mode**: `<project_dir>/logs/direct-<exec_id>.log` on the headnode
+- **Execution metadata**: `/data/executions/` inside the container (persisted via Docker volume)
+
+See [`control_plane/README.md`](control_plane/README.md) for full documentation.
+
+
 ## RoadMap
 
 * [x] Setup infrastructure from Terraform
@@ -149,6 +192,10 @@ make PARTITION=<PARTITION> JOB_ID=<JOB_ID> singularity-sbatch-shrink
 * [x] FIX:
   * [x] Squeue cannot find allocated nodelist for completed add job
   * [x] Export Horizon public endpoint
+* [x] Cluster Control Plane (Web UI)
+  * [x] Node inventory with Slurm/OpenStack role classification
+  * [x] Batch and direct execution modes
+  * [x] Live log streaming and replay
 * [ ] Air Gap Install
   * [x] Kolla Image from private Registry
   * [ ] Install OS package
