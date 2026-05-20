@@ -50,7 +50,7 @@
 		"ghcr.io/cirolosapio/devcontainers-features/alpine-make:0": {},
 		"ghcr.io/cirolosapio/devcontainers-features/alpine-docker-outside-of-docker:0": {},
 		"ghcr.io/cirolosapio/devcontainers-features/alpine-node:0": {
-			"globalPackages": "@fission-ai/openspec@latest @openai/codex @google/gemini-cli"
+			"globalPackages": "@fission-ai/openspec@latest @openai/codex"
 		},
 		"ghcr.io/anthropics/devcontainer-features/claude-code:1": {},
 		"ghcr.io/stu-bell/devcontainer-features/open-code:0": {},
@@ -59,7 +59,6 @@
 	    "source=${localEnv:HOME}/.ssh/id_rsa,target=/root/.ssh/id_rsa,type=bind,readonly",
 		"source=opencode_setting,target=/root/.local,type=volume",
 		"source=claude_setting,target=/root/.claude_setting,type=volume",
-		"source=gemini_setting,target=/root/.gemini,type=volume",
 		"source=codex_setting,target=/root/.codex,type=volume",
 	],
 	"postStartCommand":  "sh .devcontainer/postStartCommand.sh",
