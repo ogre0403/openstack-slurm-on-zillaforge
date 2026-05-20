@@ -166,10 +166,52 @@ systemctl enable --now slurmctld
 sleep 5
 sacctmgr -i add cluster "$CLUSTER_NAME" || true
 
-# 將 testuser 加入 Slurm 帳務系統，使其可提交作業
-echo "=> 在 Slurm 帳務系統中建立 testaccount 並新增 testuser"
+# 將 testuser 及 cloud-user 加入 Slurm 帳務系統，使其可提交作業
+echo "=> 在 Slurm 帳務系統中建立 testaccount 並新增使用者"
 sacctmgr -i add account testaccount Cluster="$CLUSTER_NAME" Description="Test Account" || true
 sacctmgr -i add user test-user Account=testaccount Cluster="$CLUSTER_NAME" || true
+sacctmgr -i add user cloud-user Account=testaccount Cluster="$CLUSTER_NAME" || true
+
+# ---------- Slurm REST API (slurmrestd) ----------
+echo "=> 安裝 slurm-slurmrestd"
+dnf install -y slurm-slurmrestd
+
+echo "=> 產生 JWT Secret Key"
+dd if=/dev/random bs=32 count=1 2>/dev/null \
+  | openssl enc -base64 | tr -d '\n/+=' | cut -c1-32 \
+  > /etc/slurm/jwt_hs256.key
+chown slurm:slurm /etc/slurm/jwt_hs256.key
+chmod 0600 /etc/slurm/jwt_hs256.key
+
+echo "=> 更新 slurm.conf 啟用 JWT 驗證"
+cat >> /etc/slurm/slurm.conf <<JWTCONF
+AuthAltTypes=auth/jwt
+AuthAltParameters=jwt_key=/etc/slurm/jwt_hs256.key
+JWTCONF
+
+echo "=> 設定 slurmrestd 啟動參數"
+cat > /etc/sysconfig/slurmrestd <<RESTDENV
+SLURMRESTD_OPTIONS="-a rest_auth/jwt"
+RESTDENV
+
+echo "=> 建立 slurmrestd systemd override"
+mkdir -p /etc/systemd/system/slurmrestd.service.d
+cat > /etc/systemd/system/slurmrestd.service.d/override.conf <<OVERRIDE
+[Service]
+User=slurm
+Group=slurm
+ExecStart=
+ExecStart=/usr/sbin/slurmrestd \$SLURMRESTD_OPTIONS unix:/run/slurmrestd/slurmrestd.socket 0.0.0.0:6820
+RuntimeDirectory=slurmrestd
+RuntimeDirectoryMode=0755
+OVERRIDE
+systemctl daemon-reload
+
+echo "=> 重啟 slurmctld 以載入 JWT 設定"
+systemctl restart slurmctld
+
+echo "=> 啟用並啟動 slurmrestd"
+systemctl enable --now slurmrestd
 
 # ---------- Share config via NFS ----------
 echo "=> 將設定檔派發至共享目錄"

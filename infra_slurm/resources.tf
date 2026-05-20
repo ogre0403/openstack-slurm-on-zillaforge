@@ -140,3 +140,99 @@ resource "null_resource" "test_slurm" {
     EOF
   }
 }
+
+# --------------------------------------------------------------------------
+# Test: verify Slurm REST API (slurmrestd) is operational
+# --------------------------------------------------------------------------
+
+resource "null_resource" "test_slurm_api" {
+  depends_on = [module.check_deps, null_resource.test_slurm]
+
+  provisioner "local-exec" {
+    interpreter = ["bash", "-c"]
+    command     = <<-EOF
+      set -euo pipefail
+      FIP="${zillaforge_floating_ip.headnode.ip_address}"
+      PASS="${var.server_password}"
+      USER="${local.cloud_user}"
+
+      echo "=== Slurm REST API Test ==="
+
+      echo ""
+      echo "--- Step 1: Ping slurmrestd ---"
+      # Generate a token (slurmrestd with jwt auth requires token for all endpoints)
+      TOKEN=$(sshpass -p "$PASS" ssh -o StrictHostKeyChecking=no "$USER@$FIP" \
+        "echo '$PASS' | sudo -S scontrol token username=$USER lifespan=3600 2>/dev/null | sed -n 's/^SLURM_JWT=//p'")
+      if [ -z "$TOKEN" ]; then
+        echo "ERROR: Failed to generate JWT token"
+        exit 1
+      fi
+      echo "Token acquired: $${TOKEN:0:20}..."
+
+      PING_RESULT=$(sshpass -p "$PASS" ssh -o StrictHostKeyChecking=no "$USER@$FIP" \
+        "curl -s http://localhost:6820/slurm/v0.0.38/ping \
+          -H 'X-SLURM-USER-NAME: $USER' \
+          -H 'X-SLURM-USER-TOKEN: $TOKEN'")
+      echo "$PING_RESULT"
+
+      echo ""
+      echo "--- Step 2: Submit Job via REST API ---"
+      # Write JSON payload on remote host to avoid shell escaping issues
+      sshpass -p "$PASS" ssh -o StrictHostKeyChecking=no "$USER@$FIP" \
+        "cat > /tmp/api_test_job.json << 'ENDJSON'
+{
+  \"script\": \"#!/bin/bash\nhostname\necho slurm-api-test-ok\",
+  \"job\": {
+    \"current_working_directory\": \"/tmp\",
+    \"environment\": {
+      \"PATH\": \"/bin:/usr/bin:/usr/local/bin\"
+    }
+  }
+}
+ENDJSON"
+
+      JOB_SUBMIT_RESULT=$(sshpass -p "$PASS" ssh -o StrictHostKeyChecking=no "$USER@$FIP" \
+        "curl -s -X POST http://localhost:6820/slurm/v0.0.38/job/submit \
+          -H 'Content-Type: application/json' \
+          -H 'X-SLURM-USER-NAME: $USER' \
+          -H 'X-SLURM-USER-TOKEN: $TOKEN' \
+          -d @/tmp/api_test_job.json")
+      echo "$JOB_SUBMIT_RESULT"
+
+      # Extract job_id from response using sed (Alpine BusyBox grep doesn't support -P)
+      JOB_ID=$(echo "$JOB_SUBMIT_RESULT" | sed -n 's/.*"job_id"\s*:\s*\([0-9]*\).*/\1/p' | head -1)
+      if [ -z "$JOB_ID" ]; then
+        echo "ERROR: Failed to submit job via REST API"
+        echo "Response: $JOB_SUBMIT_RESULT"
+        exit 1
+      fi
+      echo "Submitted job ID: $JOB_ID"
+
+      echo ""
+      echo "--- Step 3: Wait for job completion and verify with sacct ---"
+      # Wait for the job to finish (max 60s)
+      for i in $(seq 1 12); do
+        STATE=$(sshpass -p "$PASS" ssh -o StrictHostKeyChecking=no "$USER@$FIP" \
+          "sacct -j $JOB_ID --noheader -o State%20 2>/dev/null | head -1 | xargs" || true)
+        echo "  Job $JOB_ID state: $STATE (attempt $i)"
+        if echo "$STATE" | grep -qiE "COMPLETED|FAILED|CANCELLED|TIMEOUT"; then
+          break
+        fi
+        sleep 5
+      done
+
+      echo ""
+      echo "--- Step 4: Show job details from sacct ---"
+      sshpass -p "$PASS" ssh -o StrictHostKeyChecking=no "$USER@$FIP" \
+        "sacct -j $JOB_ID -o JobID,JobName%20,User%12,State%12,ExitCode,Start,End"
+
+      echo ""
+      if echo "$STATE" | grep -qi "COMPLETED"; then
+        echo "=== Slurm REST API Test PASSED ==="
+      else
+        echo "=== Slurm REST API Test FAILED (job state: $STATE) ==="
+        exit 1
+      fi
+    EOF
+  }
+}

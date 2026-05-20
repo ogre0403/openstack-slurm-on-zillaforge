@@ -1,0 +1,39 @@
+{
+  "features": {
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1": {
+      "version": "1.0.5",
+      "resolved": "ghcr.io/anthropics/devcontainer-features/claude-code@sha256:cfc2e7d3e9fd3b9b01f8d5cb158508a884c8c0ede2e23ed10f32dea5d4ffe69a",
+      "integrity": "sha256:cfc2e7d3e9fd3b9b01f8d5cb158508a884c8c0ede2e23ed10f32dea5d4ffe69a"
+    },
+    "ghcr.io/cirolosapio/devcontainers-features/alpine-docker-outside-of-docker:0": {
+      "version": "0.0.23",
+      "resolved": "ghcr.io/cirolosapio/devcontainers-features/alpine-docker-outside-of-docker@sha256:3d6c41447f2bdcad89752f59595604b9fd529e712c008b45c4d3312892ac5361",
+      "integrity": "sha256:3d6c41447f2bdcad89752f59595604b9fd529e712c008b45c4d3312892ac5361"
+    },
+    "ghcr.io/cirolosapio/devcontainers-features/alpine-git:0": {
+      "version": "0.0.2",
+      "resolved": "ghcr.io/cirolosapio/devcontainers-features/alpine-git@sha256:b7cb46a1fe683282d0da6e48494a4ab8210acce19f05ee0c0660fc89a12f205a",
+      "integrity": "sha256:b7cb46a1fe683282d0da6e48494a4ab8210acce19f05ee0c0660fc89a12f205a"
+    },
+    "ghcr.io/cirolosapio/devcontainers-features/alpine-make:0": {
+      "version": "0.0.2",
+      "resolved": "ghcr.io/cirolosapio/devcontainers-features/alpine-make@sha256:b85a1cd05e78e5a5899234a6b16ae889877b5ce9062b2930189124befc71a8e6",
+      "integrity": "sha256:b85a1cd05e78e5a5899234a6b16ae889877b5ce9062b2930189124befc71a8e6"
+    },
+    "ghcr.io/cirolosapio/devcontainers-features/alpine-node:0": {
+      "version": "0.0.16",
+      "resolved": "ghcr.io/cirolosapio/devcontainers-features/alpine-node@sha256:7a781b905607b5e755d1bf8d1369eb9232908b44f2f040c33a375fb5cd2fd67f",
+      "integrity": "sha256:7a781b905607b5e755d1bf8d1369eb9232908b44f2f040c33a375fb5cd2fd67f"
+    },
+    "ghcr.io/cirolosapio/devcontainers-features/alpine-openssh:0": {
+      "version": "0.0.2",
+      "resolved": "ghcr.io/cirolosapio/devcontainers-features/alpine-openssh@sha256:eb5dfc2a459ec5bb843f1cd9a221da96b0fb214a5054b5107fbf8f3c49d826d7",
+      "integrity": "sha256:eb5dfc2a459ec5bb843f1cd9a221da96b0fb214a5054b5107fbf8f3c49d826d7"
+    },
+    "ghcr.io/stu-bell/devcontainer-features/open-code:0": {
+      "version": "0.1.0",
+      "resolved": "ghcr.io/stu-bell/devcontainer-features/open-code@sha256:516bca36d585d6bb1d91024345dadcd99b6adb639f3ca128e266f3947f0d2c8d",
+      "integrity": "sha256:516bca36d585d6bb1d91024345dadcd99b6adb639f3ca128e266f3947f0d2c8d"
+    }
+  }
+}
