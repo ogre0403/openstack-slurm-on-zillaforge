@@ -27,9 +27,9 @@ dnf -y install \
 
 curl -sS https://bootstrap.pypa.io/get-pip.py | /usr/bin/python3.11
 
-pip install git+https://opendev.org/openstack/kolla-ansible@stable/2024.2 \
-&&  pip install git+https://opendev.org/openstack/osc-placement@stable/2024.2 \
-&&  pip install git+https://opendev.org/openstack/python-openstackclient@stable/2024.2
+pip install git+https://opendev.org/openstack/kolla-ansible@stable/2025.1 \
+&&  pip install git+https://opendev.org/openstack/osc-placement@stable/2025.1 \
+&&  pip install git+https://opendev.org/openstack/python-openstackclient@stable/2025.1
 
 
 export ANSIBLE_COLLECTIONS_PATH=/usr/share/ansible/collections

@@ -24,10 +24,27 @@ variable "target_host" {
   type = string
 }
 
+variable "target_dir" {
+  type    = string
+  default = "~/resource_manage"
+}
+
+variable "exclude_paths" {
+  type    = list(string)
+  default = [".git", ".terraform"]
+}
+
+locals {
+  rsync_exclude_args = join(" ", [
+    for path in var.exclude_paths : "--exclude '${replace(path, "'", "'\\''")}'"
+  ])
+}
+
 resource "null_resource" "sync_project" {
   triggers = {
-    target_host  = var.target_host
-    project_root = var.project_root
+    target_host   = var.target_host
+    project_root  = var.project_root
+    exclude_paths = join("\n", var.exclude_paths)
   }
 
   provisioner "local-exec" {
@@ -38,7 +55,7 @@ resource "null_resource" "sync_project" {
       retries=10
       delay=15
       for i in $(seq 1 $retries); do
-        sshpass -p "${var.server_password}" rsync -az --exclude '.git' -e "ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10" "${var.project_root}/" "${var.cloud_user}@${var.target_host}:resource_manage/" && break
+        sshpass -p "${var.server_password}" rsync -az ${local.rsync_exclude_args} -e "ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10" "${var.project_root}/" "${var.cloud_user}@${var.target_host}:${var.target_dir}/" && break
         echo "Attempt $i/$retries failed, retrying in $${delay}s..."
         sleep $delay
         if [ $i -eq $retries ]; then

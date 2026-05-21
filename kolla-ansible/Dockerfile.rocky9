@@ -34,9 +34,9 @@ RUN curl -sS https://bootstrap.pypa.io/get-pip.py | /usr/bin/python3.11
 
 RUN     pip install dbus-python \
     &&  pip install docker \
-    &&  pip install git+https://opendev.org/openstack/kolla-ansible@stable/2024.2 \
-    &&  pip install git+https://opendev.org/openstack/osc-placement@stable/2024.2 \
-    &&  pip install git+https://opendev.org/openstack/python-openstackclient@stable/2024.2
+    &&  pip install git+https://opendev.org/openstack/kolla-ansible@stable/2025.1 \
+    &&  pip install git+https://opendev.org/openstack/osc-placement@stable/2025.1 \
+    &&  pip install git+https://opendev.org/openstack/python-openstackclient@stable/2025.1
 
 
 # 建立預設帳號
